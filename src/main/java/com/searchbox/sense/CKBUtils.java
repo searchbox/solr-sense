@@ -24,7 +24,7 @@ public class CKBUtils {
         HashMap<String, String> ckbs = new HashMap<String, String>();
         try {        
           System.out.println("Loading CKB...");
-          Thread.sleep(5000);
+          Thread.sleep(200);
           ckbs.put("test", System.currentTimeMillis()+"");
           CKBUtils.initialized = true;
         } catch (InterruptedException ex) {
@@ -33,19 +33,8 @@ public class CKBUtils {
         return ckbs;
     }
     
-    private static void wailtInitialization(){
-        while(!CKBUtils.initialized){
-            try {
-                System.out.println("+ Waiting for CKB... !!!");
-                Thread.sleep(200);
-            } catch (InterruptedException ex) {
-                Logger.getLogger(CKBUtils.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }
-    
+   
     public static String getCKB(String name) {
-        //wailtInitialization();
         return ckbs.get(name);
     }
 }

@@ -1,19 +1,38 @@
-//package com.searchbox.lucene;
-//
-//import java.io.IOException;
-//import org.apache.lucene.index.Fields;
-//
-//
-//import org.apache.lucene.index.IndexReader;
-//import org.apache.lucene.search.Query;
-//
-//
-//import org.apache.lucene.queries.CustomScoreQuery;
-//
-//import org.slf4j.Logger;
-//import org.slf4j.LoggerFactory;
-//
-//public class SenseQuery extends CustomScoreQuery {
+package com.searchbox.lucene;
+
+import java.io.IOException;
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.Fields;
+
+
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.queries.CustomScoreProvider;
+import org.apache.lucene.search.Query;
+
+
+import org.apache.lucene.queries.CustomScoreQuery;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class SenseQuery extends CustomScoreQuery {
+  
+  public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
+
+  
+  public SenseQuery(final Query luceneQuery){
+    super(luceneQuery);
+  }
+  
+  @Override
+  protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
+        }
+        //return new SenseQuery.SenseScoreProvider(reader.clone(true));
+        return new SenseScoreProvider(context);
+    }
+}
 //
 //    public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
 //    public static final int DEFAULT_COUNT_CUTOFF = 1000000;
