@@ -146,6 +146,8 @@
   </admin>
 
 
-<queryParser name="sense" class="com.searchbox.solr.SenseQParserPlugin" />
+<queryParser name="sense" class="com.searchbox.solr.SenseQParserPlugin">
+    
+</queryParser>
 
 </config>

@@ -4,6 +4,7 @@
  */
 package com.searchbox.solr;
 
+import com.searchbox.lucene.SenseQuery;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Query;
 import org.apache.solr.common.params.SolrParams;
@@ -25,7 +26,8 @@ public class SenseQParser extends QParser{
   
   @Override
   public Query parse() throws ParseException {
-    return parent.parse();
+    // here we wrap the query with our senseQuery.
+    return new SenseQuery(parent.parse());
   }
   
 }

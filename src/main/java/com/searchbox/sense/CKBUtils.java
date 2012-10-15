@@ -15,7 +15,6 @@ import java.util.logging.Logger;
 public class CKBUtils {
 
     private static HashMap<String, String> ckbs = loadCKBs();
-    private static boolean initialized = false;
 
     private CKBUtils() {
     }
@@ -26,7 +25,6 @@ public class CKBUtils {
           System.out.println("Loading CKB...");
           Thread.sleep(200);
           ckbs.put("test", System.currentTimeMillis()+"");
-          CKBUtils.initialized = true;
         } catch (InterruptedException ex) {
             Logger.getLogger(CKBUtils.class.getName()).log(Level.SEVERE, null, ex);
         }

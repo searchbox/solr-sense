@@ -26,7 +26,8 @@ public class SenseQuery extends CustomScoreQuery {
   
   @Override
   protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
-        if (LOGGER.isDebugEnabled()) {
+    System.out.println("Setting up custom score provider.");    
+    if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
         //return new SenseQuery.SenseScoreProvider(reader.clone(true));

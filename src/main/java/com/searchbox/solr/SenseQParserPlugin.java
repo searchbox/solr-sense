@@ -5,7 +5,6 @@
 package com.searchbox.solr;
 
 import com.searchbox.lucene.SenseQuery;
-import com.searchbox.sense.CKBService;
 import com.searchbox.sense.CKBUtils;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +26,7 @@ import org.apache.solr.search.QParserPlugin;
  */
 public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
 
-  CKBService ckbService;
+  CKBUtils ckbService;
   
   public static final String NAME = "sense";
 
@@ -48,7 +47,6 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
   }  
   
   public void init(NamedList nl) {
-    ckbService = CKBService.getCKBService();
     super.init(nl);
   }
 }
