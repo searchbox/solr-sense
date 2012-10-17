@@ -32,22 +32,15 @@ public class SenseScoreProvider extends CustomScoreProvider {
     
     private final CognitiveKnowledgeBase ckb;
     private final DoubleFullVector qvector;
-    private final double ckbWeight;
+    private final double senseWeight;
     private final String senseField;
 
-    SenseScoreProvider(AtomicReaderContext context, String senseField, CognitiveKnowledgeBase ckb, DoubleFullVector qvector) {
+    SenseScoreProvider(AtomicReaderContext context, String senseField,
+            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
         super(context);
         this.ckb = ckb;
         this.qvector = qvector;
-        this.ckbWeight = 1.0;
-        this.senseField = senseField;
-    }
-    
-    SenseScoreProvider(AtomicReaderContext context, String senseField, CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
-        super(context);
-        this.ckb = ckb;
-        this.qvector = qvector;
-        this.ckbWeight = ckbWeight;
+        this.senseWeight = ckbWeight;
         this.senseField = senseField;
     }
 
@@ -72,7 +65,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
      */
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
-        Terms terms = context.reader().getTermVector(doc, "content_srch");
+        Terms terms = context.reader().getTermVector(doc, this.senseField);
 
         if (terms != null) {
             final TermsEnum termsEnum = terms.iterator(null);
@@ -104,6 +97,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
         DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap);
         Float score = new Float(dvector.getDistance(qvector));
         LOGGER.info("ckb score: " + score);
+        //TODO Andrew fix the scoring...
         return score;
     }
 

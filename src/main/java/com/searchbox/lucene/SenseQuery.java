@@ -33,6 +33,7 @@ public class SenseQuery extends CustomScoreQuery {
     private Analyzer analyzer;
     private CognitiveKnowledgeBase ckb;
     private DoubleFullVector qvector;
+    private double senseWeight = 1.0;
 
     public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery) {
         super(luceneQuery);
@@ -78,7 +79,7 @@ public class SenseQuery extends CustomScoreQuery {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        return new SenseScoreProvider(context, senseField, ckb, qvector);
+        return new SenseScoreProvider(context, senseField, ckb, qvector, senseWeight);
     }
 
     public String getQueryText() {
@@ -108,6 +109,14 @@ public class SenseQuery extends CustomScoreQuery {
     @Override
     public String toString() {
         return "sense: " + this.queryText;
+    }
+
+    public void setSenseWeight(double senseWeight) {
+        this.senseWeight = senseWeight;
+    }
+    
+    public double getSenseWeight(){
+        return this.senseWeight;
     }
 }
 //

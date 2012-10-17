@@ -4,6 +4,7 @@
  */
 package com.searchbox.solr;
 
+import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.util.Collection;
@@ -45,11 +46,14 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
     public static final String NAME = "sense";
     public static final String DEFAULT_SENSE_FIELD = "content";
+    
+    private SolrParams defaults;
 
     @Override
-    public QParser createParser(String query, SolrParams sp, SolrParams sp1, SolrQueryRequest sqr) {
-        QParser parentQparser = super.createParser(query, sp1, sp1, sqr);
-        SenseQParser SQParser = new SenseQParser(parentQparser, query, sp1, sp1, sqr);
+    public QParser createParser(String query, SolrParams localParams, SolrParams params, SolrQueryRequest sqr) {
+        QParser parentQparser = super.createParser(query, localParams, params, sqr);
+       
+        SenseQParser SQParser = new SenseQParser(parentQparser, query,  SolrParams.wrapDefaults(localParams, defaults), params, sqr);
         return SQParser;
     }
 
@@ -75,6 +79,12 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
             }
 
         }
+        
+        Object o = nl.get("defaults");
+        if (o != null && o instanceof NamedList) {
+          defaults = SolrParams.toSolrParams((NamedList)o);
+        }
+        
         LOGGER.info("---- CKBs Initialization DONE");
     }
 }
@@ -83,7 +93,6 @@ class SenseQParser extends QParser {
 
     private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
     private QParser parent;
-    private SolrParams solrParams;
 
     public SenseQParser(QParser parent, String qstr, SolrParams localParams, SolrParams params, SolrQueryRequest req) {
         super(qstr, localParams, params, req);
@@ -108,18 +117,32 @@ class SenseQParser extends QParser {
         return queryFields.keySet();
     }
 
+    private double getSenseWeight(final SolrParams localParams, final SolrParams solrParams){
+        //TODO check if null then 1.0;
+        String val;
+        Double dval;
+        if((val = solrParams.get(SenseParams.SENSE_WEIGHT))!=null)
+            dval = Double.parseDouble(val);
+        else if((val = localParams.get(SenseParams.SENSE_WEIGHT))!=null)
+            dval = Double.parseDouble(val);
+        else 
+            dval = SenseParams.DEFAULT_SENSE_WEIGHT;
+        
+        LOGGER.info("%&%&%&%&%&%&%& Sense Weight: " + dval );
+       
+        return dval;
+    }
+    
     public Query parse() throws ParseException {
         Query q = parent.parse();
         SolrParams localParams = getLocalParams();
         SolrParams params = getParams();
-
-        solrParams = SolrParams.wrapDefaults(localParams, params);
-
         
-        LOGGER.info("****** params: " + solrParams);
+        LOGGER.info("****** default: params: " + localParams);
+        LOGGER.info("****** current: params: " + params);
 
 
-        Set<String> fields = this.getQueryFields(req.getSchema(), solrParams);
+        Set<String> fields = this.getQueryFields(req.getSchema(), SolrParams.wrapDefaults(localParams, params));
         
         
         //TODO assumption only one field for now. 
@@ -127,7 +150,9 @@ class SenseQParser extends QParser {
         Analyzer analyzer = getAnalyzerForField(req.getSchema(), fieldName);
         
         
-
-        return new SenseQuery(this.qstr, fieldName, analyzer, q);
+        
+        SenseQuery query = new SenseQuery(this.qstr, fieldName, analyzer, q);
+        query.setSenseWeight(getSenseWeight(localParams, params));
+        return query;
     }
 }

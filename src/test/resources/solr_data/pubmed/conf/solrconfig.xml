@@ -119,7 +119,7 @@
             <str name="echoParams">explicit</str>
             <int name="rows">10</int>
             <str name="df">content_srch</str>
-            <float name="ckb.1.weight">.8</float>
+            <float name="sw">.8</float>
         </lst>
     </queryParser>
 
