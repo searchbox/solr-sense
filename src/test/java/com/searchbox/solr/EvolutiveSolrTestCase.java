@@ -42,7 +42,7 @@ public abstract class EvolutiveSolrTestCase {
     @BeforeClass
     public static void solrDataTestSetup() throws IOException, ParserConfigurationException, SAXException, SolrServerException, InterruptedException {
         LOGGER.info("Setting up Solr Server");
-        //System.setProperty("solr.solr.home", "./src/test/resources/solr_data");
+        System.setProperty("solr.solr.home", "./src/test/resources/solr");
         CoreContainer.Initializer initializer = new CoreContainer.Initializer();
         CoreContainer coreContainer = initializer.initialize();
         solrServer = new EmbeddedSolrServer(coreContainer, "pubmed");
