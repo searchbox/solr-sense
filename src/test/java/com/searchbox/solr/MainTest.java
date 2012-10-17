@@ -4,6 +4,7 @@
  */
 package com.searchbox.solr;
 
+import com.searchbox.sense.CognitiveKnowledgeBase;
 import junit.framework.TestCase;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrResponse;
@@ -12,13 +13,15 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.core.CoreContainer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author gamars
  */
 public class MainTest extends TestCase {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainTest.class);
     SolrServer server;
 
     public MainTest(String testName) {
@@ -45,7 +48,7 @@ public class MainTest extends TestCase {
     // public void testHello() {}
     public void testMain() throws SolrServerException {
         SolrQuery query = new SolrQuery("*");
-        query.setParam("defType", "sense");
+        query.setParam("defType", "edismax");
         QueryResponse response = server.query(query);
         assertTrue("Query has no results!", response.getResults().getNumFound() == 45);
     }
@@ -54,6 +57,8 @@ public class MainTest extends TestCase {
         SolrQuery query = new SolrQuery("information");
         query.setParam("defType", "sense");
         QueryResponse response = server.query(query);
+        LOGGER.info("Content" + response.getResults().iterator().next().getFieldValue("content_srch"));
         assertTrue("Query has no results!", response.getResults().getNumFound() == 45);
+        
     }
 }
