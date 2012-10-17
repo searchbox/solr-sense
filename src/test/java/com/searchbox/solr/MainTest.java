@@ -6,7 +6,6 @@ package com.searchbox.solr;
 
 
 import com.searchbox.sense.CognitiveKnowledgeBase;
-import com.sun.source.tree.AssertTree;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrResponse;
 import org.apache.solr.client.solrj.SolrServer;
