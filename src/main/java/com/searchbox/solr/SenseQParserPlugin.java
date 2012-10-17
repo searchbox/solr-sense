@@ -5,7 +5,8 @@
 package com.searchbox.solr;
 
 import com.searchbox.lucene.SenseQuery;
-import com.searchbox.sense.CKBUtils;
+import com.searchbox.sense.CognitiveKnowledgeBase;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -29,36 +30,48 @@ import org.slf4j.LoggerFactory;
  */
 public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
 
-  CKBUtils ckbService;
-  
-  private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
-  
-  public static final String NAME = "sense";
+    private static HashMap<String, CognitiveKnowledgeBase> ckbByID = new HashMap<String, CognitiveKnowledgeBase>();
+    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
+    public static final String NAME = "sense";
 
-  @Override
-  public QParser createParser(String query, SolrParams sp, SolrParams sp1, SolrQueryRequest sqr) {
+    @Override
+    public QParser createParser(String query, SolrParams sp, SolrParams sp1, SolrQueryRequest sqr) {
 
-    LOGGER.info("Here I get the query that I could Expand: " + query);
+        LOGGER.info("Here I get the query that I could Expand: " + query);
 
-    LOGGER.info("Got CKB hash: " + ckbService.getCKB("test"));
+        LOGGER.info("Got CKB hash: " + ckbByID.get("1"));
 
-    QParser parentQparser = super.createParser(query, sp1, sp1, sqr);
+        QParser parentQparser = super.createParser(query, sp1, sp1, sqr);
 
-    SenseQParser qParser = new SenseQParser(parentQparser, query, sp1, sp1, sqr);
-    
-    
-    LOGGER.info("Hey this is a searchbox query. Going to use sense!!!");
-    return qParser;
-  }  
-  
-  public void init(NamedList nl) {
-    super.init(nl);
-    LOGGER.info("---- CKBs Initialization ----");
-    List lst = nl.getAll("ckb");
-    for(Iterator it=lst.iterator(); it.hasNext();){
-        ckbService.initCKB((NamedList) it.next());
+        SenseQParser qParser = new SenseQParser(parentQparser, query, sp1, sp1, sqr);
+
+
+        LOGGER.info("Hey this is a searchbox query. Going to use sense!!!");
+        return qParser;
     }
-    LOGGER.info("---- CKBs Initialization DONE");
 
-  }
+    public void init(NamedList nl) {
+        super.init(nl);
+
+        LOGGER.info("#### eagerly initializing CognitiveKnowledgeBases");
+        List lst = nl.getAll("ckbs");
+        for (Iterator<NamedList> it = lst.iterator(); it.hasNext();) {
+            NamedList ckb = it.next();
+
+            LOGGER.info("\tbuilding CKB#" + ckb.getName(0) + " with params: " + ckb.get(ckb.getName(0)));
+            NamedList<String> params = (NamedList) ckb.get(ckb.getName(0));
+            if (params.get("type").equals("SPARSE")) {
+                CognitiveKnowledgeBase ckb_ = CognitiveKnowledgeBase.loadSparseCKB(
+                        params.get("name"),
+                        params.get("baseDirectory"), params.get("modelFile"),
+                        //TODO shoudl be logical path
+                        params.get("idfFile"), params.get("dictionaryFile"),
+                        Double.parseDouble(params.get("certaintyValue")),
+                        Double.parseDouble(params.get("maximumDistance")));
+                ckbByID.put(ckb.getName(0), ckb_);
+            }
+
+        }
+        LOGGER.info("---- CKBs Initialization DONE");
+    }
 }

@@ -4,7 +4,8 @@
  */
 package com.searchbox.lucene;
 
-import com.searchbox.sense.CKBUtils;
+import com.searchbox.math.DoubleFullVector;
+import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,10 +28,23 @@ import org.slf4j.LoggerFactory;
  */
 public class SenseScoreProvider extends CustomScoreProvider {
     
-    private static final Logger LOGGER = LoggerFactory.getLogger(CKBUtils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SenseScoreProvider.class);
+    private final CognitiveKnowledgeBase ckb;
+    private final DoubleFullVector qvector;
+    private final double ckbWeight;
 
-    SenseScoreProvider(AtomicReaderContext context) {
+    SenseScoreProvider(AtomicReaderContext context, CognitiveKnowledgeBase ckb, DoubleFullVector qvector) {
         super(context);
+        this.ckb = ckb;
+        this.qvector = qvector;
+        this.ckbWeight = 1.0;
+    }
+    
+    SenseScoreProvider(AtomicReaderContext context, CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
+        super(context);
+        this.ckb = ckb;
+        this.qvector = qvector;
+        this.ckbWeight = ckbWeight;
     }
 
     /**

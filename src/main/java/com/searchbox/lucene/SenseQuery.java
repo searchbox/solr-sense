@@ -1,6 +1,9 @@
 package com.searchbox.lucene;
 
+import com.searchbox.math.DoubleFullVector;
+import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.io.IOException;
+import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Fields;
 
@@ -16,22 +19,58 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SenseQuery extends CustomScoreQuery {
-  
-  public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
 
-  
-  public SenseQuery(final Query luceneQuery){
-    super(luceneQuery);
-  }
-  
-  @Override
-  protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
-    System.out.println("Setting up custom score provider.");    
-    if (LOGGER.isDebugEnabled()) {
+    public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
+    private String queryText;
+    private String[] senseFields;
+    private Analyzer analyzer;
+
+    public SenseQuery(final String queryText, String[] senseFields, Analyzer analyzer, final Query luceneQuery) {
+        super(luceneQuery);
+        this.queryText = queryText;
+        this.senseFields = senseFields;
+        this.analyzer = analyzer;
+    }
+
+    @Override
+    protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
+        System.out.println("Setting up custom score provider.");
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
         //return new SenseQuery.SenseScoreProvider(reader.clone(true));
-        return new SenseScoreProvider(context);
+        CognitiveKnowledgeBase ckb = null;
+        DoubleFullVector qvector = null;
+        return new SenseScoreProvider(context, ckb, qvector);
+    }
+
+    public String getQueryText() {
+        return queryText;
+    }
+
+    public void setQueryText(String queryText) {
+        this.queryText = queryText;
+    }
+
+    public String[] getSenseFields() {
+        return senseFields;
+    }
+
+    public void setSenseFields(String[] senseFields) {
+        this.senseFields = senseFields;
+    }
+
+    public Analyzer getAnalyzer() {
+        return analyzer;
+    }
+
+    public void setAnalyzer(Analyzer analyzer) {
+        this.analyzer = analyzer;
+    }
+
+    @Override
+    public String toString() {
+        return "sense: " + this.queryText;
     }
 }
 //

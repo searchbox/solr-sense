@@ -10,6 +10,7 @@ import org.apache.solr.client.solrj.SolrResponse;
 import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
+import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.core.CoreContainer;
 
 /**
@@ -43,11 +44,18 @@ public class MainTest extends TestCase {
     // TODO add test methods here. The name must begin with 'test'. For example:
     // public void testHello() {}
     public void testMain() throws SolrServerException {
-
-        SolrQuery query = new SolrQuery("information");
+        SolrQuery query = new SolrQuery("*");
         query.setParam("defType", "sense");
-
-        SolrResponse response = server.query(query);
-
+        QueryResponse response = server.query(query);
+        assertTrue("Query has no results!", response.getResults().getNumFound() == 45);
+    }
+    
+    public void testSingletonCKB() throws SolrServerException {
+        SolrQuery query = new SolrQuery("*");
+        query.setParam("defType", "sense");
+        QueryResponse response = server.query(query);
+        assertTrue("Query has no results!", response.getResults().getNumFound() == 45);
+        response = server.query(query);
+        assertTrue("Query has no results!", response.getResults().getNumFound() == 45);     
     }
 }

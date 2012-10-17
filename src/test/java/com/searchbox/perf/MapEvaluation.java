@@ -24,7 +24,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
  *
  * @author gamars
  */
-public class toto {
+public class MapEvaluation {
 
     static class SparseEntry implements Comparable<SparseEntry> {
 

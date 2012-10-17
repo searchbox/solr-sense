@@ -156,15 +156,16 @@
         -->
         <lst name="ckbs">
             <lst name="1">
-                <str name="name">pubmed Sparse EN"</str>
-                <double name="certainty_value">16.1014593340993</double>
-                <double name="maximum_distance">1.4059477152206</double>
+                <str name="name">pubmed Sparse EN</str>
+                <str name="certaintyValue">16.1014593340993</str>
+                <str name="maximumDistance">1.4059477152206</str>
                 <str name="type">SPARSE</str>
                 <str name="locale">en</str>
-                <str name="basedirectory">CKB/pubmed</str>
-                <str name="modelfile">pubmed.cache</str>
-                <str name="idffile">pubmed.idflog</str>
-                <str name="dictionary">pubmed.tdic</str>
+                <!-- //TODO shoudl be logical path -->
+                <str name="baseDirectory">./src/test/resources/CKB/pubmed/</str>
+                <str name="modelFile">pubmed.cache</str>
+                <str name="idfFile">pubmed.idflog</str>
+                <str name="dictionaryFile">pubmed.tdic</str>
             </lst>
         </lst>
         

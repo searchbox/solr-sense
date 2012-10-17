@@ -5,6 +5,7 @@
 package com.searchbox.sense;
 
 import com.searchbox.math.DoubleFullVector;
+import com.searchbox.utils.SystemUtils;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,14 +14,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
-import com.searchbox.utils.SystemUtils;
-import java.util.Collection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +72,10 @@ public class CognitiveKnowledgeBase {
         return dimentionality;
     }   
     
+    public int getDictionarySize() {
+        return this.getRowDimension();
+    }   
+    
     public Collection<String> getTerms(){
         return this.col.keySet();
     }
@@ -114,15 +116,15 @@ public class CognitiveKnowledgeBase {
         return this.dimentionality;
     }
 
-    public static CognitiveKnowledgeBase loadSparseCKB(String name, Type type, String directory,
-            String modelFile, String idfFile, String dictionary,
+    public static CognitiveKnowledgeBase loadSparseCKB(String name, String baseDirectory,
+            String modelFile, String idfFile, String dictionaryFile,
             double certainyValue, double maximumDistance) {
         CognitiveKnowledgeBase ckb = null;
         BufferedReader in = null;
         try {
             
-            LOGGER.info("Loadign CKB dictionary data from: " + dictionary);
-            ArrayList<String> terms = CognitiveKnowledgeBase.loadDictionary(new File(directory + dictionary));
+            LOGGER.info("Loadign CKB dictionary data from: " + baseDirectory + dictionaryFile);
+            ArrayList<String> terms = CognitiveKnowledgeBase.loadDictionary(new File(baseDirectory + dictionaryFile));
             LOGGER.info("Dictionary loaded with " + terms.size() + " terms.");
             Map<String, List<Integer>> col = new HashMap<String, List<Integer>>();
             Map<String, List<Double>> val = new HashMap<String, List<Double>>();
@@ -133,8 +135,8 @@ public class CognitiveKnowledgeBase {
                 val.put(term, new ArrayList<Double>());
             }
             
-            LOGGER.info("Loadign CKB data from: " + modelFile);
-            in = new BufferedReader(new InputStreamReader(new FileInputStream(directory + modelFile)));
+            LOGGER.info("Loadign CKB data from: " + baseDirectory + modelFile);
+            in = new BufferedReader(new InputStreamReader(new FileInputStream(baseDirectory + modelFile)));
             final String metaLine = in.readLine();
             if (metaLine == null) {
                 throw new RuntimeException("Can't read first line of Sparse CKB file");
@@ -233,7 +235,7 @@ public class CognitiveKnowledgeBase {
             }
             LOGGER.debug("READ " + count + " lines and added " + terms.size() + " stems.");
         } catch (FileNotFoundException e) {
-            throw new RuntimeException("Dictionary can not be created.", e);
+            throw new RuntimeException("Dictionary file could not be found in: " + dictionary.getAbsolutePath(), e);
         } catch (NumberFormatException e) {
             throw new RuntimeException("Dictionary can not be created.", e);
         } catch (IOException e) {

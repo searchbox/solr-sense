@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.searchbox;
+package com.searchbox.sense;
 
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
@@ -30,7 +30,7 @@ public class TestCognitiveKnowledgeBase extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
         this.ckb = CognitiveKnowledgeBase.loadSparseCKB("test",
-               CognitiveKnowledgeBase.Type.SPARSE, "./src/test/resources/CKB/pubmed/",
+                "./src/test/resources/CKB/pubmed/",
                "pubmed.cache", "pubmed.idflog", "pubmed.tdic", 1.0, 1.0);
     }
     
