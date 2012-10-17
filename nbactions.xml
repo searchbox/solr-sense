@@ -7,7 +7,7 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2:exec</goal>
             </goals>
             <properties>
-                <exec.args>-Xmx4000m -Xms2000m -classpath %classpath com.searchbox.Test</exec.args>
+                <exec.args>-Xmx4000m -Xms2000m -classpath %classpath com.searchbox.lucene.toto</exec.args>
                 <exec.executable>java</exec.executable>
                 <exec.classpathScope>runtime</exec.classpathScope>
             </properties>
@@ -19,7 +19,7 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2:exec</goal>
             </goals>
             <properties>
-                <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -Xmx4000m -Xms2000m -classpath %classpath com.searchbox.Test</exec.args>
+                <exec.args>-Xdebug -Xrunjdwp:transport=dt_socket,server=n,address=${jpda.address} -Xmx4000m -Xms2000m -classpath %classpath com.searchbox.lucene.toto</exec.args>
                 <exec.executable>java</exec.executable>
                 <exec.classpathScope>runtime</exec.classpathScope>
                 <jpda.listen>true</jpda.listen>
@@ -32,8 +32,20 @@
                 <goal>org.codehaus.mojo:exec-maven-plugin:1.2:exec</goal>
             </goals>
             <properties>
-                <exec.args>${profiler.args} -Xmx4000m -Xms2000m -classpath %classpath com.searchbox.Test</exec.args>
+                <exec.args>${profiler.args} -Xmx4000m -Xms2000m -classpath %classpath com.searchbox.lucene.toto</exec.args>
                 <exec.executable>${profiler.java}</exec.executable>
+            </properties>
+        </action>
+        <action>
+            <actionName>test.single</actionName>
+            <goals>
+                <goal>test-compile</goal>
+                <goal>surefire:test</goal>
+                
+            </goals>
+            <properties>
+                <test>${packageClassName}</test>
+                <exec.args>-Xmx4000m -Xms2000m</exec.args>
             </properties>
         </action>
     </actions>

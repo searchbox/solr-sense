@@ -138,16 +138,39 @@
        Admin Handlers - This will register all the standard admin
        RequestHandlers.  
     -->
-  <requestHandler name="/admin/" 
-                  class="solr.admin.AdminHandlers" />
-
-  <admin>
-    <defaultQuery>*:*</defaultQuery>
-  </admin>
-
-
-<queryParser name="sense" class="com.searchbox.solr.SenseQParserPlugin">
+    <requestHandler name="/admin/" 
+                    class="solr.admin.AdminHandlers" />
     
-</queryParser>
+    <admin>
+        <defaultQuery>*:*</defaultQuery>
+    </admin>
+
+
+    <queryParser name="sense" class="com.searchbox.solr.SenseQParserPlugin">
+        <!--    
+        <lst name="ckbs">
+            <lst name="1">
+                <str name="jndi">searchbox/PubMedSparseEN</str>
+            </lst>
+        </lst>
+        -->
+        <lst name="ckbs">
+            <lst name="1">
+                <str name="name">pubmed Sparse EN"</str>
+                <double name="certainty_value">16.1014593340993</double>
+                <double name="maximum_distance">1.4059477152206</double>
+                <str name="type">SPARSE</str>
+                <str name="locale">en</str>
+                <str name="basedirectory">CKB/pubmed</str>
+                <str name="modelfile">pubmed.cache</str>
+                <str name="idffile">pubmed.idflog</str>
+                <str name="dictionary">pubmed.tdic</str>
+            </lst>
+        </lst>
+        
+        <lst name="defaults">
+          <float name="ckb.1.weight">.8</float>
+        </lst>
+    </queryParser>
 
 </config>
