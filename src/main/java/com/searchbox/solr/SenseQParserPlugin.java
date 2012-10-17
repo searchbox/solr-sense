@@ -7,17 +7,11 @@ package com.searchbox.solr;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.sense.CognitiveKnowledgeBase;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.naming.Context;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Query;
@@ -25,15 +19,13 @@ import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.DisMaxParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
-import org.apache.solr.core.SolrCore;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.search.ExtendedDismaxQParserPlugin;
 import org.apache.solr.search.QParser;
-import org.apache.solr.search.QParserPlugin;
 import org.apache.solr.search.QueryParsing;
 import org.apache.solr.util.SolrPluginUtils;
-import org.apache.solr.util.plugin.SolrCoreAware;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -43,7 +35,7 @@ import org.slf4j.LoggerFactory;
 public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
 
     public static HashMap<String, CognitiveKnowledgeBase> ckbByID = new HashMap<String, CognitiveKnowledgeBase>();
-    private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
     public static final String NAME = "sense";
     public static final String DEFAULT_SENSE_FIELD = "content";
     
@@ -64,7 +56,7 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
         List lst = nl.getAll("ckbs");
         for (Iterator<NamedList> it = lst.iterator(); it.hasNext();) {
             NamedList ckb = it.next();
-
+            
             LOGGER.info("\tbuilding CKB#" + ckb.getName(0) + " with params: " + ckb.get(ckb.getName(0)));
             NamedList<String> params = (NamedList) ckb.get(ckb.getName(0));
             if (params.get("type").equals("SPARSE")) {

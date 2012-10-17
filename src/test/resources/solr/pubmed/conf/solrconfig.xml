@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<config>
+
+  <luceneMatchVersion>LUCENE_40</luceneMatchVersion>
+
+<!--  
+<lib dir="/opt/solr/lib/dist/" regex=".*\.jar" />
+  <lib dir="/opt/solr/lib/contrib/**/lib" regex=".*\.jar" />
+
+  <lib dir="/opt/solr/lib/searchbox" regex=".*\.jar" />
+-->
+
+
+
+  <dataDir>${solr.data.dir:}</dataDir>
+
+
+  <directoryFactory name="DirectoryFactory" 
+                    class="${solr.directoryFactory:solr.NRTCachingDirectoryFactory}"/> 
+
+  <indexConfig>
+   
+  </indexConfig>
+
+  <jmx />
+
+  <!-- The default high-performance update handler -->
+  <updateHandler class="solr.DirectUpdateHandler2">
+
+     <autoCommit> 
+       <maxTime>15000</maxTime> 
+       <openSearcher>false</openSearcher> 
+     </autoCommit>
+
+
+    <updateLog>
+      <str name="dir">${solr.data.dir:}</str>
+    </updateLog>
+   
+
+  </updateHandler>
+  
+
+  <requestDispatcher handleSelect="false" >
+
+    <requestParsers enableRemoteStreaming="true" 
+                    multipartUploadLimitInKB="2048000" />
+
+    <httpCaching never304="true" />
+
+  </requestDispatcher>
+
+
+  <requestHandler name="/select" class="solr.SearchHandler">
+    <!-- default values for query parameters can be specified, these
+         will be overridden by parameters in the request
+      -->
+     <lst name="defaults">
+       <str name="echoParams">explicit</str>
+       <int name="rows">10</int>
+       <str name="df">content_srch</str>
+     </lst>
+    
+    </requestHandler>
+
+
+
+
+  <requestHandler name="/update" class="solr.UpdateRequestHandler">
+    <!-- See below for information on defining 
+         updateRequestProcessorChains that can be used by name 
+         on each Update Request
+      -->
+    <!--
+       <lst name="defaults">
+         <str name="update.chain">dedupe</str>
+       </lst>
+       -->
+  </requestHandler>
+
+ 
+  <!-- Admin Handlers
+
+       Admin Handlers - This will register all the standard admin
+       RequestHandlers.  
+    -->
+    <requestHandler name="/admin/" 
+                    class="solr.admin.AdminHandlers" />
+    
+    <admin>
+        <defaultQuery>*:*</defaultQuery>
+    </admin>
+
+
+    <queryParser name="sense" class="com.searchbox.solr.SenseQParserPlugin">
+        <!--    
+        <lst name="ckbs">
+            <lst name="1">
+                <str name="jndi">searchbox/PubMedSparseEN</str>
+            </lst>
+        </lst>
+        -->
+        <lst name="ckbs">
+            <lst name="1">
+                <str name="name">pubmed Sparse EN</str>
+                <str name="certaintyValue">16.1014593340993</str>
+                <str name="maximumDistance">1.4059477152206</str>
+                <str name="type">SPARSE</str>
+                <str name="locale">en</str>
+                <!-- //TODO shoudl be logical path -->
+                <str name="baseDirectory">./src/test/resources/CKB/pubmed/</str>
+                <str name="modelFile">pubmed.cache</str>
+                <str name="idfFile">pubmed.idflog</str>
+                <str name="dictionaryFile">pubmed.tdic</str>
+            </lst>
+        </lst>
+        
+        <lst name="defaults">
+            <str name="echoParams">explicit</str>
+            <int name="rows">10</int>
+            <str name="df">content_srch</str>
+            <float name="sw">.8</float>
+        </lst>
+    </queryParser>
+
+
+
+ 
+ <requestHandler name="/dataimport" class="org.apache.solr.handler.dataimport.DataImportHandler">  
+    <lst name="defaults">  
+      <str name="config">data-config.xml</str>  
+    </lst>  
+  </requestHandler>
+
+</config>
