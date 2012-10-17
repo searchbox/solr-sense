@@ -41,60 +41,6 @@
   </updateHandler>
   
 
-  <query>
-
-    <maxBooleanClauses>1024</maxBooleanClauses>
-
-
-    <filterCache class="solr.FastLRUCache"
-                 size="512"
-                 initialSize="512"
-                 autowarmCount="0"/>
-
-    <queryResultCache class="solr.LRUCache"
-                     size="512"
-                     initialSize="512"
-                     autowarmCount="0"/>
-
-    <documentCache class="solr.LRUCache"
-                   size="512"
-                   initialSize="512"
-                   autowarmCount="0"/>
-
-    <enableLazyFieldLoading>true</enableLazyFieldLoading>
-
-   <queryResultWindowSize>20</queryResultWindowSize>
-
-   <!-- Maximum number of documents to cache for any entry in the
-        queryResultCache. 
-     -->
-   <queryResultMaxDocsCached>200</queryResultMaxDocsCached>
-
-    <listener event="newSearcher" class="solr.QuerySenderListener">
-      <arr name="queries">
-        <!--
-           <lst><str name="q">solr</str><str name="sort">price asc</str></lst>
-           <lst><str name="q">rocks</str><str name="sort">weight asc</str></lst>
-          -->
-      </arr>
-    </listener>
-    <listener event="firstSearcher" class="solr.QuerySenderListener">
-      <arr name="queries">
-        <lst>
-          <str name="q">static firstSearcher warming in solrconfig.xml</str>
-          <str name="defType">sense</str>
-        </lst>
-      </arr>
-    </listener>
-
-
-    <useColdSearcher>false</useColdSearcher>
-
-    <maxWarmingSearchers>2</maxWarmingSearchers>
-
-  </query>
-
-
   <requestDispatcher handleSelect="false" >
 
     <requestParsers enableRemoteStreaming="true" 
@@ -112,7 +58,7 @@
      <lst name="defaults">
        <str name="echoParams">explicit</str>
        <int name="rows">10</int>
-       <str name="df">title</str>
+       <str name="df">content_srch</str>
      </lst>
     
     </requestHandler>
@@ -170,7 +116,10 @@
         </lst>
         
         <lst name="defaults">
-          <float name="ckb.1.weight">.8</float>
+            <str name="echoParams">explicit</str>
+            <int name="rows">10</int>
+            <str name="df">content_srch</str>
+            <float name="ckb.1.weight">.8</float>
         </lst>
     </queryParser>
 

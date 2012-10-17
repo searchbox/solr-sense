@@ -2,8 +2,15 @@ package com.searchbox.lucene;
 
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
+import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
+import java.io.StringReader;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Fields;
 
@@ -22,14 +29,47 @@ public class SenseQuery extends CustomScoreQuery {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
     private String queryText;
-    private String[] senseFields;
+    private String senseField;
     private Analyzer analyzer;
+    private CognitiveKnowledgeBase ckb;
+    private DoubleFullVector qvector;
 
-    public SenseQuery(final String queryText, String[] senseFields, Analyzer analyzer, final Query luceneQuery) {
+    public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery) {
         super(luceneQuery);
         this.queryText = queryText;
-        this.senseFields = senseFields;
+        this.senseField = senseField;
         this.analyzer = analyzer;
+        //TODO shoul be getting a CKB by some clever method
+        this.ckb = SenseQParserPlugin.ckbByID.get("1");
+
+
+
+        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+        try {
+            TokenStream ts = analyzer.tokenStream("", new StringReader(queryText));
+
+            int tokenCount = 0;
+            // for every token
+            CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
+            ts.reset();
+            while (ts.incrementToken()) {
+                String word = termAtt.toString();
+                tokenCount++;
+
+
+                // increment frequency
+                Integer cnt = termFreqMap.get(word);
+                if (cnt == null) {
+                    termFreqMap.put(word, new Integer(1));
+                } else {
+                    cnt += 1;
+                }
+            }
+            ts.end();
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(SenseQuery.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        this.qvector = ckb.getFullCkbVector(termFreqMap);
     }
 
     @Override
@@ -38,10 +78,7 @@ public class SenseQuery extends CustomScoreQuery {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        //return new SenseQuery.SenseScoreProvider(reader.clone(true));
-        CognitiveKnowledgeBase ckb = null;
-        DoubleFullVector qvector = null;
-        return new SenseScoreProvider(context, ckb, qvector);
+        return new SenseScoreProvider(context, senseField, ckb, qvector);
     }
 
     public String getQueryText() {
@@ -52,12 +89,12 @@ public class SenseQuery extends CustomScoreQuery {
         this.queryText = queryText;
     }
 
-    public String[] getSenseFields() {
-        return senseFields;
+    public String getSenseField() {
+        return senseField;
     }
 
-    public void setSenseFields(String[] senseFields) {
-        this.senseFields = senseFields;
+    public void setSenseFields(String senseField) {
+        this.senseField = senseField;
     }
 
     public Analyzer getAnalyzer() {

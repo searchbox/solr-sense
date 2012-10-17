@@ -17,11 +17,11 @@ import org.apache.solr.core.CoreContainer;
  *
  * @author gamars
  */
-public class MainTest extends TestCase {
+public class ExportTest extends TestCase {
 
     SolrServer server;
 
-    public MainTest(String testName) {
+    public ExportTest(String testName) {
         super(testName);
     }
 

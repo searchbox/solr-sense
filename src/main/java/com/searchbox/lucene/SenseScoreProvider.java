@@ -29,22 +29,26 @@ import org.slf4j.LoggerFactory;
 public class SenseScoreProvider extends CustomScoreProvider {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(SenseScoreProvider.class);
+    
     private final CognitiveKnowledgeBase ckb;
     private final DoubleFullVector qvector;
     private final double ckbWeight;
+    private final String senseField;
 
-    SenseScoreProvider(AtomicReaderContext context, CognitiveKnowledgeBase ckb, DoubleFullVector qvector) {
+    SenseScoreProvider(AtomicReaderContext context, String senseField, CognitiveKnowledgeBase ckb, DoubleFullVector qvector) {
         super(context);
         this.ckb = ckb;
         this.qvector = qvector;
         this.ckbWeight = 1.0;
+        this.senseField = senseField;
     }
     
-    SenseScoreProvider(AtomicReaderContext context, CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
+    SenseScoreProvider(AtomicReaderContext context, String senseField, CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
         super(context);
         this.ckb = ckb;
         this.qvector = qvector;
         this.ckbWeight = ckbWeight;
+        this.senseField = senseField;
     }
 
     /**
@@ -90,13 +94,17 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 }
             }
         }
+        LOGGER.info("Evaluating Document with TF size: " + termFreqMap.size());
         if(LOGGER.isTraceEnabled()){
             for (String t : termFreqMap.keySet()) {
                 LOGGER.trace("term: |" + t + "| -- frequ: " + termFreqMap.get(t));
             }
         }
        
-        return 1000f;
+        DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap);
+        Float score = new Float(dvector.getDistance(qvector));
+        LOGGER.info("ckb score: " + score);
+        return score;
     }
 
     /**
