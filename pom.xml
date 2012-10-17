@@ -20,6 +20,12 @@
             <artifactId>solr-core</artifactId>
             <version>4.0.0</version>
             <type>jar</type>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-jdk14</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.lucene</groupId>
@@ -31,6 +37,24 @@
             <artifactId>lucene-queries</artifactId>
             <version>4.0.0</version>
         </dependency>
+        
+        
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.12</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.1</version>
+        </dependency>
+        
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -56,7 +80,7 @@
                         <property>
                             <name>MAVEN_OPTS</name>
                             <value>-Xmx4000m</value>
-                        </property>-->
+                        </property>
                     </systemProperties>
                     <argLine>-Xmx4000m</argLine>
                 </configuration>
