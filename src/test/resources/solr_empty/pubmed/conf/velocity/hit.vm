@@ -1,0 +1,12 @@
+#set($docId = $doc.getFieldValue('id'))
+
+<div class="result-document">
+
+<div class="result-title">
+<img src="/solr/img/filetypes/file.png" align="center">
+<a href="18437583" target="_blank"><b>$doc.title</b></a>
+</div>
+#if($doc.body)
+	$doc.body
+#end
+</div>
