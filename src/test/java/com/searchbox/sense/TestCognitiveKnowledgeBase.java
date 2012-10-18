@@ -31,7 +31,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         assertTrue("CKB has no dimensions", ckb.getDimentionality() > 0);
     }
 
-    @Ignore
+    @Test
     public void testTFcreation() throws SolrServerException, IOException {
         HashMap<String, Integer> ground_truth = new HashMap<String, Integer>();
         ground_truth.put("dog", 1);
