@@ -4,59 +4,122 @@
  */
 package com.searchbox.sense;
 
+import com.searchbox.commons.params.SenseParams;
+import com.searchbox.lucene.SenseQuery;
+import com.searchbox.lucene.SenseScoreProvider;
 import com.searchbox.math.DoubleFullVector;
-import com.searchbox.sense.CognitiveKnowledgeBase;
-import com.searchbox.utils.SystemUtils;
+import com.searchbox.solr.EmptySolrTestCase;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
-import junit.framework.TestCase;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.Analyzer.TokenStreamComponents;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
+import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilterFactory;
+import org.apache.lucene.analysis.standard.StandardTokenizerFactory;
+import org.apache.lucene.index.AtomicReader;
+import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.store.Directory;
+import org.apache.solr.analysis.SolrAnalyzer;
+import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.response.QueryResponse;
+import org.apache.solr.client.solrj.response.UpdateResponse;
+import org.apache.solr.common.SolrInputDocument;
+import org.apache.solr.request.SolrQueryRequest;
+import org.apache.solr.search.SolrIndexSearcher;
+import static org.junit.Assert.*;
 
 /**
  *
  * @author gamars
  */
-public class TestCognitiveKnowledgeBase extends TestCase {
-    
-    private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveKnowledgeBase.class);
-    private CognitiveKnowledgeBase ckb;
+public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
 
-    public TestCognitiveKnowledgeBase(String testName) {
-        super(testName);
-    }
+    private CognitiveKnowledgeBase ckb;
+    private SenseQuery sensequery;
+    private SenseScoreProvider sensescoreprovider;
+    protected LocalRequestFactory lrf;
+
     
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        this.ckb = CognitiveKnowledgeBase.loadSparseCKB("test",
-                "./src/test/resources/CKB/pubmed/",
-               "pubmed.cache", "pubmed.idflog", "pubmed.tdic", 1.0, 1.0);
-    }
+   public SolrQueryRequest req(String... q) {
+    return lrf.makeRequest(q);
+  }
     
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    private static Analyzer getAnalyzer() {
+        return new Analyzer() {
+            protected TokenStreamComponents createComponents(final String fieldName,
+                    final Reader reader) {
+                return new TokenStreamComponents(new WhitespaceTokenizer(org.apache.lucene.util.Version.LUCENE_40, reader));
+            }
+        };
     }
-    // TODO add test methods here. The name must begin with 'test'. For example:
-    // public void testHello() {}
-    
-    public void testLoadingCKB(){
+
+    public void testLoadingCKB() {
         assertTrue("No terms has been loaded", ckb.getTerms().size() > 0);
-        assertTrue("CKB has no dimensions", ckb.getDimentionality()>0);
+        assertTrue("CKB has no dimensions", ckb.getDimentionality() > 0);
     }
-    
-    public void testCKBVector(){
+
+    public void testTFcreation() throws SolrServerException, IOException {
+        SolrInputDocument doc = new SolrInputDocument();
+        doc.addField("id", System.currentTimeMillis() + "");
+        doc.addField("content_srch", "Hello World");
+        solrServer.add(doc);
+        solrServer.commit();
+
+        
+        
+        
+        SolrQuery query = new SolrQuery("hello");
+        QueryResponse response = solrServer.query(query);
+        assertTrue("Query has no results!", response.getResults().getNumFound() == 1);
+        
+        
+        
+        
+        
+        
+        
+        
+        SolrQueryRequest req= new SolrQueryRequest();
+        
+        String queryText = "Hellow World";
+        SolrIndexSearcher searcher = req.getSearcher();
+        IndexReader reader = searcher.getAtomicReader();
+        Terms terms = reader.getTermVector(0, "content_srch");
+
+        
+        
+        Map<String, Integer> termFreqMapsq = sensequery.getTermFreqMapfromTokenStream(getAnalyzer().tokenStream("", new StringReader(queryText)));
+
+        Map<String, Integer> termFreqMapssp = sensescoreprovider.getTermFreqmapfromTerms(terms);
+
+
+
+
+
+        //do some assert here
+
+    }
+
+    public void testCKBVector() {
         Map<String, Integer> tf = new HashMap<String, Integer>();
         tf.put("hello", 1);
         tf.put("world", 1);
         DoubleFullVector vector = ckb.getFullCkbVector(tf);
         System.out.println("Got vector of dimension: " + vector.getDimension());
-        assertTrue("Vector has null dimention",vector.getDimension()>0);
+        assertTrue("Vector has null dimention", vector.getDimension() > 0);
         assertTrue("Vector has different dim than CKB", vector.getDimension() == ckb.getDimentionality());
-        
-        for(double d:vector.getData())
-            System.out.print(d+", ");
+
+        for (double d : vector.getData()) {
+            System.out.print(d + ", ");
+        }
         System.out.println();
     }
 }
