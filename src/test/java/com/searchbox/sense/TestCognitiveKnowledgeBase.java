@@ -5,38 +5,14 @@
 package com.searchbox.sense;
 
 import com.searchbox.SolrUtils;
-import com.searchbox.commons.params.SenseParams;
-import com.searchbox.lucene.SenseQuery;
-import com.searchbox.lucene.SenseScoreProvider;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.solr.EmptySolrTestCase;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.Analyzer.TokenStreamComponents;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.core.WhitespaceTokenizer;
-import org.apache.lucene.analysis.miscellaneous.WordDelimiterFilterFactory;
-import org.apache.lucene.analysis.standard.StandardTokenizerFactory;
-import org.apache.lucene.index.AtomicReader;
-import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Terms;
-import org.apache.lucene.store.Directory;
-import org.apache.solr.analysis.SolrAnalyzer;
-import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
-import org.apache.solr.client.solrj.response.QueryResponse;
-import org.apache.solr.client.solrj.response.UpdateResponse;
 import org.apache.solr.common.SolrInputDocument;
-import org.apache.solr.request.SolrQueryRequest;
-import org.apache.solr.search.SolrIndexSearcher;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -66,17 +42,26 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
 
     @Test
     public void testTFcreation() throws SolrServerException, IOException {
+        HashMap<String, Integer> ground_truth = new HashMap<String, Integer>();
+        ground_truth.put("dog", 1);
+        ground_truth.put("fish", 4);
+        ground_truth.put("happy", 9);
+        ground_truth.put("internet", 1);
+        ground_truth.put("large", 1);
+        ground_truth.put("party", 1);
+        ground_truth.put("sad", 1);
+        ground_truth.put("small", 3);
+        ground_truth.put("study", 2);
+        ground_truth.put("swam", 1);
+        ground_truth.put("swim", 2);
+        ground_truth.put("unknown", 1);
+        ground_truth.put("jump", 3);
+
+
         SolrInputDocument doc = new SolrInputDocument();
         String id = System.currentTimeMillis() + "";
         doc.addField("id", id);
-        doc.addField("content_srch", "Hello World");
-        solrServer.add(doc);
-        solrServer.commit();
-
-        doc = new SolrInputDocument();
-        id = System.currentTimeMillis() + "";
-        doc.addField("id", id);
-        doc.addField("content_srch", "Goodby night");
+        doc.addField("content_srch", "jump jumping jumped swim swimming swam dog fish fish fish happy happy happy happy happy happy happy happy happy sad large small small small unknown party internet studying fish study and the ");
         solrServer.add(doc);
         solrServer.commit();
 
