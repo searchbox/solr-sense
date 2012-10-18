@@ -45,13 +45,13 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         HashMap<String, Integer> ground_truth = new HashMap<String, Integer>();
         ground_truth.put("dog", 1);
         ground_truth.put("fish", 4);
-        ground_truth.put("happy", 9);
+        ground_truth.put("happi", 9);
         ground_truth.put("internet", 1);
-        ground_truth.put("large", 1);
-        ground_truth.put("party", 1);
+        ground_truth.put("larg", 1);
+        ground_truth.put("parti", 1);
         ground_truth.put("sad", 1);
         ground_truth.put("small", 3);
-        ground_truth.put("study", 2);
+        ground_truth.put("studi", 2);
         ground_truth.put("swam", 1);
         ground_truth.put("swim", 2);
         ground_truth.put("unknown", 1);
@@ -64,42 +64,15 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         doc.addField("content_srch", "jump jumping jumped swim swimming swam dog fish fish fish happy happy happy happy happy happy happy happy happy sad large small small small unknown party internet studying fish study and the ");
         solrServer.add(doc);
         solrServer.commit();
-
-        LOGGER.info("Getting TF for all document (q=*:*)");
-        Map<String, HashMap<String, Integer>> tfms = SolrUtils.getTermFrequencyMapForQuery(solrServer, "content_srch", "*:*");
-        for (String sid : tfms.keySet()) {
-            LOGGER.info("TF for document id#" + sid);
-            for (Entry<String, Integer> tf : tfms.get(sid).entrySet()) {
-                LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
-            }
-        }
-
-
+        
         LOGGER.info("Getting TF for ONE document (q=id:" + id + ")");
-        tfms = SolrUtils.getTermFrequencyMapForQuery(solrServer, "content_srch", "id:" + id);
+        Map<String, HashMap<String, Integer>> tfms = SolrUtils.getTermFrequencyMapForQuery(solrServer, "content_srch", "id:" + id);
         for (String sid : tfms.keySet()) {
             LOGGER.info("TF for document id#" + sid);
             for (Entry<String, Integer> tf : tfms.get(sid).entrySet()) {
                 LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
+                assertTrue("TF stemming doesn't match ground truth!", ground_truth.get(tf.getKey()) == tf.getValue());
             }
-        }
-
-        LOGGER.info("TF for raw content for a CONTENT_SRCH field in schema");
-        HashMap<String, Integer> tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "content_srch", "I like this method very much and will do!");
-        for (Entry<String, Integer> tf : tfs.entrySet()) {
-            LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
-        }
-
-        LOGGER.info("TF for raw content for a CATEGORY field in schema");
-        tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "category", "I like this method very much!");
-        for (Entry<String, Integer> tf : tfs.entrySet()) {
-            LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
-        }
-
-        LOGGER.info("TF for raw content for a BODY field in schema");
-        tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "body", "I like this method very much!");
-        for (Entry<String, Integer> tf : tfs.entrySet()) {
-            LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
         }
     }
 
