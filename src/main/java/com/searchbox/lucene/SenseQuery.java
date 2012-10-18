@@ -35,6 +35,35 @@ public class SenseQuery extends CustomScoreQuery {
     private DoubleFullVector qvector;
     private double senseWeight = 1.0;
 
+    public Map<String, Integer> getTermFreqMapfromTokenStream(TokenStream ts) throws IOException {
+        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+
+
+
+        int tokenCount = 0;
+        // for every token
+        CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
+        ts.reset();
+        while (ts.incrementToken()) {
+            String word = termAtt.toString();
+            tokenCount++;
+
+
+            // increment frequency
+            Integer cnt = termFreqMap.get(word);
+            if (cnt == null) {
+                termFreqMap.put(word, new Integer(1));
+            } else {
+                cnt += 1;
+            }
+        }
+        ts.end();
+
+
+        return termFreqMap;
+
+    }
+
     public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery) {
         super(luceneQuery);
         this.queryText = queryText;
@@ -42,31 +71,10 @@ public class SenseQuery extends CustomScoreQuery {
         this.analyzer = analyzer;
         //TODO shoul be getting a CKB by some clever method
         this.ckb = SenseQParserPlugin.ckbByID.get("1");
-
-
-
-        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+        
+        Map<String, Integer> termFreqMap =null;
         try {
-            TokenStream ts = analyzer.tokenStream("", new StringReader(queryText));
-
-            int tokenCount = 0;
-            // for every token
-            CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
-            ts.reset();
-            while (ts.incrementToken()) {
-                String word = termAtt.toString();
-                tokenCount++;
-
-
-                // increment frequency
-                Integer cnt = termFreqMap.get(word);
-                if (cnt == null) {
-                    termFreqMap.put(word, new Integer(1));
-                } else {
-                    cnt += 1;
-                }
-            }
-            ts.end();
+            termFreqMap = getTermFreqMapfromTokenStream(this.analyzer.tokenStream("", new StringReader(queryText)));
         } catch (IOException ex) {
             java.util.logging.Logger.getLogger(SenseQuery.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -114,8 +122,8 @@ public class SenseQuery extends CustomScoreQuery {
     public void setSenseWeight(double senseWeight) {
         this.senseWeight = senseWeight;
     }
-    
-    public double getSenseWeight(){
+
+    public double getSenseWeight() {
         return this.senseWeight;
     }
 }

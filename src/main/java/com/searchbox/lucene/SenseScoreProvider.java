@@ -63,10 +63,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @param valSrcScores scores of that doc by the ValueSourceQuery.
      * @return custom score.
      */
-    public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
+    
+    public Map<String, Integer> getTermFreqmapfromTerms(Terms terms) throws IOException 
+    {
         Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
-        Terms terms = context.reader().getTermVector(doc, this.senseField);
-
         if (terms != null) {
             final TermsEnum termsEnum = terms.iterator(null);
             BytesRef text;
@@ -87,6 +87,16 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 }
             }
         }
+        return termFreqMap;
+    }
+    
+    @Override
+    public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
+        
+        Terms terms = context.reader().getTermVector(doc, this.senseField);
+        Map<String, Integer> termFreqMap = getTermFreqmapfromTerms(terms);
+
+        
         LOGGER.info("Evaluating Document with TF size: " + termFreqMap.size());
         if(LOGGER.isTraceEnabled()){
             for (String t : termFreqMap.keySet()) {
