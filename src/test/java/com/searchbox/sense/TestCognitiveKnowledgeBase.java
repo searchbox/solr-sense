@@ -71,7 +71,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
             LOGGER.info("TF for document id#" + sid);
             for (Entry<String, Integer> tf : tfms.get(sid).entrySet()) {
                 LOGGER.info("\t" + tf.getKey() + "\t" + tf.getValue());
-                assertTrue("TF stemming doesn't match ground truth!", ground_truth.get(tf.getKey()) == tf.getValue());
+                 assertTrue("TF stemming doesn't match ground truth! [ "+tf.getKey()+" ] ", ground_truth.get(tf.getKey()) == tf.getValue());
             }
         }
     }
