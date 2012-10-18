@@ -75,7 +75,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         solrServer.commit();
 
         LOGGER.info("Getting TF for all document (q=*:*)");
-        Map<String, HashMap<String, Integer>> tfms = SolrUtils.getTermFrequencyMap(solrServer, "content_srch", "*:*");
+        Map<String, HashMap<String, Integer>> tfms = SolrUtils.getTermFrequencyMapForQuery(solrServer, "content_srch", "*:*");
         for(String sid:tfms.keySet()){
             LOGGER.info("TF for document id#"+sid);
             for(Entry<String, Integer> tf:tfms.get(sid).entrySet()){
@@ -85,13 +85,32 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         
         
         LOGGER.info("Getting TF for ONE document (q=id:"+id+")");
-        tfms = SolrUtils.getTermFrequencyMap(solrServer, "content_srch", "id:"+id);
+        tfms = SolrUtils.getTermFrequencyMapForQuery(solrServer, "content_srch", "id:"+id);
         for(String sid:tfms.keySet()){
             LOGGER.info("TF for document id#"+sid);
             for(Entry<String, Integer> tf:tfms.get(sid).entrySet()){
                 LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
             }
         }
+        
+        LOGGER.info("TF for raw content for a CONTENT_SRCH field in schema");
+        HashMap<String, Integer> tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "content_srch", "I like this method very much!");
+        for(Entry<String, Integer> tf:tfs.entrySet()){
+            LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
+        }
+        
+        LOGGER.info("TF for raw content for a CATEGORY field in schema");
+        tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "category", "I like this method very much!");
+        for(Entry<String, Integer> tf:tfs.entrySet()){
+            LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
+        }
+        
+        LOGGER.info("TF for raw content for a BODY field in schema");
+        tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "body", "I like this method very much!");
+        for(Entry<String, Integer> tf:tfs.entrySet()){
+            LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
+        }
+        
         
         
         
