@@ -39,14 +39,14 @@ public class SolrUtils {
         server.commit();
         return id;
     }
-    
+
     public static HashMap<String, Integer> getTermFrequencyMapForContent(SolrServer server, String fieldName, String content) throws SolrServerException, IOException {
         String id = makeTempDocument(server, fieldName, content);
-        HashMap<String, Integer> vector = getTermFrequencyMapForQuery(server, fieldName, "id:"+id).get(id);
+        HashMap<String, Integer> vector = getTermFrequencyMapForQuery(server, fieldName, "id:" + id).get(id);
         server.deleteById(id);
         server.commit();
         return vector;
-        
+
     }
 
     public static Map<String, HashMap<String, Integer>> getTermFrequencyMapForQuery(SolrServer server, String fieldName, String query) throws SolrServerException {
@@ -67,12 +67,16 @@ public class SolrUtils {
             String id = (String) doc.get("uniqueKey");
             NamedList tf = (NamedList) doc.get(fieldName);
             HashMap<String, Integer> tfmap = new HashMap<String, Integer>();
-            for (int tfi = 0; tfi < tf.size(); tfi++) {
-                String term = tf.getName(tfi);
-                Integer count = (Integer) ((NamedList) tf.getVal(tfi)).get("tf");
-                tfmap.put(term, count);
+
+            if (tf != null) {
+                for (int tfi = 0; tfi < tf.size(); tfi++) {
+                    String term = tf.getName(tfi);
+                    Integer count = (Integer) ((NamedList) tf.getVal(tfi)).get("tf");
+                    tfmap.put(term, count);
+                }
             }
             vectors.put(id, tfmap);
+
         }
 
         return vectors;

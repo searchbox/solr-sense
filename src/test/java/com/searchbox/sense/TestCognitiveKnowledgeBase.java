@@ -94,7 +94,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         }
         
         LOGGER.info("TF for raw content for a CONTENT_SRCH field in schema");
-        HashMap<String, Integer> tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "content_srch", "I like this method very much!");
+        HashMap<String, Integer> tfs = SolrUtils.getTermFrequencyMapForContent(solrServer, "content_srch", "I like this method very much and will do!");
         for(Entry<String, Integer> tf:tfs.entrySet()){
             LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
         }
