@@ -36,6 +36,7 @@ import static org.junit.Assert.*;
 public abstract class DataSolrTestCase {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(DataSolrTestCase.class);
+    
     protected static SolrServer solrServer;
 
     @BeforeClass

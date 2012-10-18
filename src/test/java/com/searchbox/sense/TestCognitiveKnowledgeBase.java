@@ -4,6 +4,7 @@
  */
 package com.searchbox.sense;
 
+import com.searchbox.SolrUtils;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.lucene.SenseScoreProvider;
@@ -13,7 +14,9 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.Analyzer.TokenStreamComponents;
 import org.apache.lucene.analysis.TokenStream;
@@ -35,6 +38,8 @@ import org.apache.solr.common.SolrInputDocument;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.SolrIndexSearcher;
 import static org.junit.Assert.*;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  *
@@ -45,69 +50,85 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
     private CognitiveKnowledgeBase ckb;
     private SenseQuery sensequery;
     private SenseScoreProvider sensescoreprovider;
-    protected LocalRequestFactory lrf;
-
     
-   public SolrQueryRequest req(String... q) {
-    return lrf.makeRequest(q);
-  }
-    
-    private static Analyzer getAnalyzer() {
-        return new Analyzer() {
-            protected TokenStreamComponents createComponents(final String fieldName,
-                    final Reader reader) {
-                return new TokenStreamComponents(new WhitespaceTokenizer(org.apache.lucene.util.Version.LUCENE_40, reader));
-            }
-        };
-    }
 
+    @Ignore
     public void testLoadingCKB() {
         assertTrue("No terms has been loaded", ckb.getTerms().size() > 0);
         assertTrue("CKB has no dimensions", ckb.getDimentionality() > 0);
     }
 
+    @Test
     public void testTFcreation() throws SolrServerException, IOException {
         SolrInputDocument doc = new SolrInputDocument();
-        doc.addField("id", System.currentTimeMillis() + "");
+        String id = System.currentTimeMillis() + "";
+        doc.addField("id", id);
         doc.addField("content_srch", "Hello World");
         solrServer.add(doc);
         solrServer.commit();
+        
+        doc = new SolrInputDocument();
+        id = System.currentTimeMillis() + "";
+        doc.addField("id", id);
+        doc.addField("content_srch", "Goodby night");
+        solrServer.add(doc);
+        solrServer.commit();
 
+        LOGGER.info("Getting TF for all document (q=*:*)");
+        Map<String, HashMap<String, Integer>> tfms = SolrUtils.getTermFrequencyMap(solrServer, "content_srch", "*:*");
+        for(String sid:tfms.keySet()){
+            LOGGER.info("TF for document id#"+sid);
+            for(Entry<String, Integer> tf:tfms.get(sid).entrySet()){
+                LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
+            }
+        }
+        
+        
+        LOGGER.info("Getting TF for ONE document (q=id:"+id+")");
+        tfms = SolrUtils.getTermFrequencyMap(solrServer, "content_srch", "id:"+id);
+        for(String sid:tfms.keySet()){
+            LOGGER.info("TF for document id#"+sid);
+            for(Entry<String, Integer> tf:tfms.get(sid).entrySet()){
+                LOGGER.info("\t"+tf.getKey()+"\t"+tf.getValue());
+            }
+        }
         
         
         
-        SolrQuery query = new SolrQuery("hello");
-        QueryResponse response = solrServer.query(query);
-        assertTrue("Query has no results!", response.getResults().getNumFound() == 1);
-        
-        
-        
-        
-        
-        
-        
-        
-        SolrQueryRequest req= new SolrQueryRequest();
-        
-        String queryText = "Hellow World";
-        SolrIndexSearcher searcher = req.getSearcher();
-        IndexReader reader = searcher.getAtomicReader();
-        Terms terms = reader.getTermVector(0, "content_srch");
-
-        
-        
-        Map<String, Integer> termFreqMapsq = sensequery.getTermFreqMapfromTokenStream(getAnalyzer().tokenStream("", new StringReader(queryText)));
-
-        Map<String, Integer> termFreqMapssp = sensescoreprovider.getTermFreqmapfromTerms(terms);
-
-
-
+//        
+//        SolrQuery query = new SolrQuery("hello");
+//        QueryResponse response = solrServer.query(query);
+//        assertTrue("Query has no results!", response.getResults().getNumFound() == 1);
+//        
+//        
+//        
+//        
+//        
+//        
+//        
+//        
+//        SolrQueryRequest req= new SolrQueryRequest();
+//        
+//        String queryText = "Hellow World";
+//        SolrIndexSearcher searcher = req.getSearcher();
+//        IndexReader reader = searcher.getAtomicReader();
+//        Terms terms = reader.getTermVector(0, "content_srch");
+//
+//        
+//        
+//        Map<String, Integer> termFreqMapsq = sensequery.getTermFreqMapfromTokenStream(getAnalyzer().tokenStream("", new StringReader(queryText)));
+//
+//        Map<String, Integer> termFreqMapssp = sensescoreprovider.getTermFreqmapfromTerms(terms);
+//
+//
+//
 
 
         //do some assert here
 
     }
 
+    @Ignore
     public void testCKBVector() {
         Map<String, Integer> tf = new HashMap<String, Integer>();
         tf.put("hello", 1);
