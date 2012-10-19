@@ -56,7 +56,7 @@ public class SenseQuery extends CustomScoreQuery {
             if (cnt == null) {
                 termFreqMap.put(word, new Integer(1));
             } else {
-                cnt += 1;
+                termFreqMap.put(word, cnt + 1);
             }
         }
         ts.end();
