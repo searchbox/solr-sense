@@ -5,6 +5,7 @@
 package com.searchbox.lucene;
 
 import com.searchbox.math.DoubleFullVector;
+import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,16 +33,18 @@ public class SenseScoreProvider extends CustomScoreProvider {
     
     private final CognitiveKnowledgeBase ckb;
     private final DoubleFullVector qvector;
+    private final RealTermFreqVector qtfidf;
     private final double senseWeight;
     private final String senseField;
 
     SenseScoreProvider(AtomicReaderContext context, String senseField,
-            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, double ckbWeight) {
+            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, double ckbWeight) {
         super(context);
         this.ckb = ckb;
         this.qvector = qvector;
         this.senseWeight = ckbWeight;
         this.senseField = senseField;
+        this.qtfidf =qtfidf;
     }
 
     /**
@@ -96,19 +99,31 @@ public class SenseScoreProvider extends CustomScoreProvider {
         Terms terms = context.reader().getTermVector(doc, this.senseField);
         Map<String, Integer> termFreqMap = getTermFreqmapfromTerms(terms);
 
-        
         LOGGER.info("Evaluating Document with TF size: " + termFreqMap.size());
         if(LOGGER.isTraceEnabled()){
             for (String t : termFreqMap.keySet()) {
                 LOGGER.trace("term: |" + t + "| -- frequ: " + termFreqMap.get(t));
             }
         }
-       
-        DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap);
-        Float score = new Float(dvector.getDistance(qvector));
-        LOGGER.info("ckb score: " + score);
-        //TODO Andrew fix the scoring...
-        return score;
+        
+        
+        double ckbscore=0;
+        double idfscore=0;
+        
+        if (senseWeight != 0.0) {
+            DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
+            ckbscore = dvector.getDistance(qvector);
+            LOGGER.info("ckbscore: " + ckbscore);
+        }
+        if (senseWeight != 1.0) {
+            RealTermFreqVector dtfidf =ckb.getTfIdfVector(termFreqMap);
+            idfscore= dtfidf.getUnitVector().getDistance(qtfidf);
+            LOGGER.info("idfscore: " + idfscore);
+        }
+        
+        float finalscore=(float) (senseWeight*ckbscore+(1-senseWeight)*idfscore);
+        LOGGER.info("Final score "+ finalscore);
+        return finalscore; 
     }
 
     /**

@@ -5,6 +5,7 @@
 package com.searchbox.sense;
 
 import com.searchbox.math.DoubleFullVector;
+import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.utils.SystemUtils;
 import java.io.BufferedReader;
 import java.io.File;
@@ -29,6 +30,8 @@ import org.slf4j.LoggerFactory;
 public class CognitiveKnowledgeBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveKnowledgeBase.class);
+
+   
 
     public enum Type {
         SPARSE,
@@ -96,6 +99,18 @@ public class CognitiveKnowledgeBase {
             }
         }
         return new DoubleFullVector(vector);
+    }
+
+    public RealTermFreqVector getTfIdfVector(Map<String, Integer> termFreqMap) {
+        Map<String, Double> termFreqMapOut= new HashMap<String,Double>();
+        for (Entry<String, Integer> tf : termFreqMap.entrySet()) {
+            String key = tf.getKey();
+            Double val=idf.get(key);
+            if (val!=null) {
+                termFreqMapOut.put(key, new Double(tf.getValue()*val));
+            }
+        }
+        return new RealTermFreqVector(termFreqMapOut);
     }
 
     public double computeSimilarity(DoubleFullVector q, DoubleFullVector t) {
@@ -192,9 +207,15 @@ public class CognitiveKnowledgeBase {
             col=null;
             val=null;
 
+            LOGGER.info("Loadign idf data from: " + baseDirectory + idfFile);
+            
+            Map<String, Double> idf  = CognitiveKnowledgeBase.loadIdf(new File(baseDirectory + idfFile));
+            
+            LOGGER.info("Done. idf has size: " + idf.size());
+            
             LOGGER.info(SystemUtils.getMemoryUsage());
 
-            ckb = new CognitiveKnowledgeBase(name, coll, vall, null, ncol, certainyValue, maximumDistance);
+            ckb = new CognitiveKnowledgeBase(name, coll, vall, idf, ncol, certainyValue, maximumDistance);
 
 
         } catch (IOException e) {

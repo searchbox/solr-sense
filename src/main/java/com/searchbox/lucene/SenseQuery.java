@@ -1,6 +1,7 @@
 package com.searchbox.lucene;
 
 import com.searchbox.math.DoubleFullVector;
+import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
@@ -32,6 +33,7 @@ public class SenseQuery extends CustomScoreQuery {
     private String senseField;
     private Analyzer analyzer;
     private CognitiveKnowledgeBase ckb;
+    private RealTermFreqVector qtfidf;
     private DoubleFullVector qvector;
     private double senseWeight = 1.0;
 
@@ -64,21 +66,33 @@ public class SenseQuery extends CustomScoreQuery {
 
     }
 
-    public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery) {
+    public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery,double senseWeight ) {
         super(luceneQuery);
         this.queryText = queryText;
         this.senseField = senseField;
         this.analyzer = analyzer;
+        this.senseWeight=senseWeight;
         //TODO shoul be getting a CKB by some clever method
         this.ckb = SenseQParserPlugin.ckbByID.get("1");
-        
-        Map<String, Integer> termFreqMap =null;
+
+        Map<String, Integer> termFreqMap = null;
         try {
             termFreqMap = getTermFreqMapfromTokenStream(this.analyzer.tokenStream("", new StringReader(queryText)));
         } catch (IOException ex) {
             java.util.logging.Logger.getLogger(SenseQuery.class.getName()).log(Level.SEVERE, null, ex);
         }
-        this.qvector = ckb.getFullCkbVector(termFreqMap);
+
+        if (senseWeight != 0.0) {
+            this.qvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
+        } else {
+            this.qvector = null;
+        }
+
+        if (senseWeight != 1.0) {
+            this.qtfidf = ckb.getTfIdfVector(termFreqMap).getUnitVector();
+        } else {
+            this.qtfidf = null;
+        }
     }
 
     @Override
@@ -87,7 +101,7 @@ public class SenseQuery extends CustomScoreQuery {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        return new SenseScoreProvider(context, senseField, ckb, qvector, senseWeight);
+        return new SenseScoreProvider(context, senseField, ckb, qvector,qtfidf, senseWeight);
     }
 
     public String getQueryText() {

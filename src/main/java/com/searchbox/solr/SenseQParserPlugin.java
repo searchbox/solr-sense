@@ -143,8 +143,7 @@ class SenseQParser extends QParser {
         
         
         
-        SenseQuery query = new SenseQuery(this.qstr, fieldName, analyzer, q);
-        query.setSenseWeight(getSenseWeight(localParams, params));
+        SenseQuery query = new SenseQuery(this.qstr, fieldName, analyzer, q,getSenseWeight(localParams, params));
         return query;
     }
 }
