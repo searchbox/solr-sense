@@ -82,17 +82,11 @@ public class SenseQuery extends CustomScoreQuery {
             java.util.logging.Logger.getLogger(SenseQuery.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        if (senseWeight != 0.0) {
-            this.qvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
-        } else {
-            this.qvector = null;
-        }
+        
+        //always compute these, even if senseWeight is 0 or 1 because we can change the value later and it will be null causing error
+        this.qvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
+        this.qtfidf = ckb.getTfIdfVector(termFreqMap).getUnitVector();
 
-        if (senseWeight != 1.0) {
-            this.qtfidf = ckb.getTfIdfVector(termFreqMap).getUnitVector();
-        } else {
-            this.qtfidf = null;
-        }
     }
 
     @Override

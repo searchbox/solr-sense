@@ -296,4 +296,6 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
    }
     
     
+    
+    
 }
