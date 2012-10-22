@@ -59,6 +59,7 @@ public class SolrUtils {
         params.set("tv.tf", "true");
         params.set("tv.fl", fieldName);
         params.set("q", query);
+        params.set("rows", 50);
         QueryResponse response = server.query(params);
         NamedList termVectors = (NamedList) response.getResponse().get("termVectors");
 
