@@ -15,7 +15,14 @@ import java.util.Map.Entry;
 public class RealTermFreqVector {
 
     private Map<String, Double> index;
-    
+
+    public Map<String, Double> getData() {
+        return index;
+    }
+     public void setIndex(Map<String, Double> index) {
+        this.index = index;
+    }
+     
     public RealTermFreqVector(Map<String, Double> termFreqMap) {
         this.index=termFreqMap;
     }
@@ -46,7 +53,7 @@ public class RealTermFreqVector {
     }
 
     public RealTermFreqVector getUnitVector() {
-        Map<String, Double> termFreqMap= index;
+        Map<String, Double> termFreqMap= new HashMap<String, Double>(index);
         double norm=0;
         double val=0;
         
