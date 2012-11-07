@@ -5,84 +5,150 @@ import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Fields;
 
 
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.IndexableField;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.queries.CustomScoreProvider;
 import org.apache.lucene.search.Query;
 
 
 import org.apache.lucene.queries.CustomScoreQuery;
+import org.apache.lucene.queries.mlt.MoreLikeThis;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.util.BytesRef;
+import org.apache.lucene.util.CharsRef;
+import org.apache.lucene.util.UnicodeUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SenseQuery extends CustomScoreQuery {
-
-    public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
-    private String queryText;
-    private String senseField;
-    private Analyzer analyzer;
-    private CognitiveKnowledgeBase ckb;
-    private RealTermFreqVector qtfidf;
-    private DoubleFullVector qvector;
-    private double senseWeight = 1.0;
-
-    public Map<String, Integer> getTermFreqMapfromTokenStream(TokenStream ts) throws IOException {
-        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
-
-
-
-        int tokenCount = 0;
-        // for every token
-        CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
-        ts.reset();
-        while (ts.incrementToken()) {
-            String word = termAtt.toString();
-            tokenCount++;
-
-
-            // increment frequency
-            Integer cnt = termFreqMap.get(word);
-            if (cnt == null) {
-                termFreqMap.put(word, new Integer(1));
-            } else {
-                termFreqMap.put(word, cnt + 1);
+    
+    private static Query generateLuceneQuery(final String[] terms, final String senseField, final List<Query> filters){
+        
+        BooleanQuery topLevelQuery = new BooleanQuery();
+        if(terms != null){
+            for(String term:terms){
+                topLevelQuery.add(new BooleanClause(new TermQuery(new Term(senseField, term)), BooleanClause.Occur.SHOULD));
             }
         }
-        ts.end();
-
-
-        return termFreqMap;
-
+        
+        if(filters != null){
+            for(Query filter:filters){
+                topLevelQuery.add(new BooleanClause(filter, BooleanClause.Occur.MUST));
+            }
+        }
+        
+        return topLevelQuery;
     }
 
-    public SenseQuery(final String queryText, String senseField, Analyzer analyzer, final Query luceneQuery,double senseWeight ) {
-        super(luceneQuery);
-        this.queryText = queryText;
-        this.senseField = senseField;
-        this.analyzer = analyzer;
-        this.senseWeight=senseWeight;
-        //TODO shoul be getting a CKB by some clever method
-        this.ckb = SenseQParserPlugin.ckbByID.get("1");
+    public static SenseQuery SenseQueryForDocument(final int id, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
 
-        Map<String, Integer> termFreqMap = null;
+        final Fields vectors;
+        final Terms vector;
         try {
-            termFreqMap = getTermFreqMapfromTokenStream(this.analyzer.tokenStream("", new StringReader(queryText)));
-        } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(SenseQuery.class.getName()).log(Level.SEVERE, null, ex);
+        vectors = ir.getTermVectors(id);
+        if (vectors != null) {
+            vector = vectors.terms(senseField);
+        } else {
+            vector = null;
         }
 
-        
+        // field does not store term vector info
+        if (vector == null) {
+            throw new RuntimeException("No termVectorFrequency available for field: " + senseField);
+        }
+
+        final Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+        final TermsEnum termsEnum = vector.iterator(null);
+        final CharsRef spare = new CharsRef();
+        BytesRef text;
+        while ((text = termsEnum.next()) != null) {
+            UnicodeUtil.UTF8toUTF16(text, spare);
+            final String term = spare.toString();
+
+            final int freq = (int) termsEnum.totalTermFreq();
+
+            // increment frequency
+            if (!termFreqMap.containsKey(term)) {
+                termFreqMap.put(term, 1);
+            } else {
+                termFreqMap.put(term, termFreqMap.get(term) + freq);
+            }
+
+        }
+        return new SenseQuery(termFreqMap, senseField,
+                generateLuceneQuery(termFreqMap.keySet().toArray(new String[0]),senseField, filters),
+                senseWeight);
+        } catch (IOException ex) {
+            throw new RuntimeException("Could not generate SenseQuery for document[" + id+"]. Exception: " + ex.getMessage());
+        }
+    }
+
+    public static SenseQuery SenseQueryForText(final String queryText, String senseField, Analyzer analyzer, double senseWeight, final List<Query> filters) {
+        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
+        try {
+            TokenStream ts = analyzer.tokenStream("", new StringReader(queryText));
+            int tokenCount = 0;
+            // for every token
+            CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
+            ts.reset();
+
+            while (ts.incrementToken()) {
+                String word = termAtt.toString();
+                tokenCount++;
+                // increment frequency
+                Integer cnt = termFreqMap.get(word);
+                if (cnt == null) {
+                    termFreqMap.put(word, new Integer(1));
+                } else {
+                    termFreqMap.put(word, cnt + 1);
+                }
+            }
+
+            ts.end();
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(SenseQuery.class
+                    .getName()).log(Level.SEVERE, null, ex);
+        }
+        return new SenseQuery(termFreqMap, senseField, 
+                generateLuceneQuery(termFreqMap.keySet().toArray(new String[0]),senseField, filters),
+                senseWeight);
+    }
+    public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
+    private String senseField;
+    private final Map<String, Integer> termFreqMap;
+    private final CognitiveKnowledgeBase ckb;
+    private final RealTermFreqVector qtfidf;
+    private final DoubleFullVector qvector;
+    private double senseWeight = 1.0;
+
+    public SenseQuery(final Map<String, Integer> termFreqMap, String senseField, final Query luceneQuery, double senseWeight) {
+        super(luceneQuery);
+        this.senseField = senseField;
+        this.senseWeight = senseWeight;
+        //TODO shoul be getting a CKB by some clever method
+        this.ckb = SenseQParserPlugin.ckbByID.get("1");
+        this.termFreqMap = termFreqMap;
+
         //always compute these, even if senseWeight is 0 or 1 because we can change the value later and it will be null causing error
         this.qvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
         this.qtfidf = ckb.getTfIdfVector(termFreqMap).getUnitVector();
@@ -95,15 +161,7 @@ public class SenseQuery extends CustomScoreQuery {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        return new SenseScoreProvider(context, senseField, ckb, qvector,qtfidf, senseWeight);
-    }
-
-    public String getQueryText() {
-        return queryText;
-    }
-
-    public void setQueryText(String queryText) {
-        this.queryText = queryText;
+        return new SenseScoreProvider(context, senseField, ckb, qvector, qtfidf, senseWeight);
     }
 
     public String getSenseField() {
@@ -114,17 +172,9 @@ public class SenseQuery extends CustomScoreQuery {
         this.senseField = senseField;
     }
 
-    public Analyzer getAnalyzer() {
-        return analyzer;
-    }
-
-    public void setAnalyzer(Analyzer analyzer) {
-        this.analyzer = analyzer;
-    }
-
     @Override
     public String toString() {
-        return "sense: " + this.queryText;
+        return "sense with TF size: " + this.termFreqMap.size();
     }
 
     public void setSenseWeight(double senseWeight) {

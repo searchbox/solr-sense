@@ -96,19 +96,6 @@ class SenseQParser extends QParser {
         return indexSchema.getField(fieldName).getType().getAnalyzer();
     }
 
-    private Set<String> getQueryFields(final IndexSchema indexSchema, final SolrParams solrParams) {
-        Map<String, Float> queryFields = SolrPluginUtils.parseFieldBoosts(solrParams.getParams(DisMaxParams.QF));
-        if (queryFields.isEmpty()) {
-            String df = QueryParsing.getDefaultField(indexSchema, solrParams.get(CommonParams.DF));
-            if (df == null) {
-                //TODO should fail elegantly
-                df = SenseQParserPlugin.DEFAULT_SENSE_FIELD;
-            }
-            queryFields.put(df, 1.0f);
-        }
-        return queryFields.keySet();
-    }
-
     private double getSenseWeight(final SolrParams localParams, final SolrParams solrParams){
         //TODO check if null then 1.0;
         String val;
@@ -134,16 +121,16 @@ class SenseQParser extends QParser {
         LOGGER.info("****** current: params: " + params);
 
 
-        Set<String> fields = this.getQueryFields(req.getSchema(), SolrParams.wrapDefaults(localParams, params));
         
+        String field = SolrParams.wrapDefaults(localParams, params).get(SenseParams.SENSE_FIELD);
+        if(field == null || field.isEmpty())
+            throw new RuntimeException("Missing sense field for sense query");
+
+        Analyzer analyser = getAnalyzerForField(req.getSchema(), field);
+        if(analyser == null)
+            throw new RuntimeException("Missing analyzer for field ["+field+"]");
         
-        //TODO assumption only one field for now. 
-        String fieldName = fields.iterator().next();
-        Analyzer analyzer = getAnalyzerForField(req.getSchema(), fieldName);
-        
-        
-        
-        SenseQuery query = new SenseQuery(this.qstr, fieldName, analyzer, q,getSenseWeight(localParams, params));
+        SenseQuery query = SenseQuery.SenseQueryForText(this.qstr, field, analyser, getSenseWeight(localParams, params), null);
         return query;
     }
 }

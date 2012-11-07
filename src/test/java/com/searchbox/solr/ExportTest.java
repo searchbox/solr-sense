@@ -113,7 +113,6 @@ public class ExportTest extends DataSolrTestCase {
                         String term = tf.getName(tfi);
                         Integer count = (Integer) ((NamedList) tf.getVal(tfi)).get("tf");
                         tffile_out.write(totaldoc + "\t" + getTerm(term) + "\t" + count+"\n");
-
                     }
                 }
                 totaldoc++;

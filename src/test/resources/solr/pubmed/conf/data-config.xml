@@ -2,7 +2,7 @@
 <dataConfig>
     <dataSource type="FileDataSource" encoding="UTF-8"/>
     <document>
-        <entity name="f" 
+        <entity name="filelist" 
 			processor="FileListEntityProcessor" 
 			baseDir="./src/test/resources/data/pubmed"
 			fileName="^.*\.nxml$" 
@@ -10,26 +10,13 @@
 			rootEntity="false"
 			dataSource="null"
 			>
-			
-            <entity name="x" 
-					stream="true" 
-					processor="XPathEntityProcessor" 
-					forEach="/article/"
-					url="${f.fileAbsolutePath}" 
-					transformer="TemplateTransformer">
-                <field column="id"    xpath="/article/front/article-meta/article-id[@pub-id-type='pmc']" />
-		        <field column="title"     xpath="/article/front/article-meta/title-group/article-title" />
-		        <field column="body"      xpath="/article/front/article-meta/abstract/p" />
-		        <field column="year"  xpath="/article/front/article-meta/pub-date[@pub-type='ppub']/year" />
-		        <field column="keywords"      xpath="/article/front/article-meta/kwd-group/kwd" />
-		        <field column="journal-title"    xpath="/article/front/journal-meta/journal-title" />
-		        <field column="category"    xpath="/article/front/article-meta/article-categories/subj-group[@subj-group-type='heading']/subject" />
-		        <!-- http://lucene.472066.n3.nabble.com/Concatenate-multivalued-DIH-fields-td2749988.html -->
-				<field column="surname" xpath="/article/front/article-meta/contrib-group/contrib[@contrib-type='author']/name/surname"/>
-				<field column="givennames" xpath="/article/front/article-meta/contrib-group/contrib[@contrib-type='author']/name/given-names"/>
-				
-				<field column="authors" template="${x.surname} ${x.givennames}"/>
-            </entity>
+       
+            <entity name="article" 
+                    stream="true" 
+                    processor="XPathEntitityprocessor"
+                    xslt="xslt/pmc-to-solr.xslt"
+                    useSolrAddXml="true"/>
+                    
         </entity>
     </document>
 </dataConfig>
