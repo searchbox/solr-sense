@@ -95,6 +95,34 @@
             <type>jar</type>
         </dependency>
     </dependencies>
+    
+    <repositories>
+        <repository>
+            <id>salsadev</id>
+            <url>http://mvn.salsadev.com/nexus/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+    
+    <distributionManagement>
+        <repository>
+            <id>salsadev</id>
+            <name>salsadev</name>
+            <uniqueVersion>false</uniqueVersion>
+            <url>http://mvn.salsadev.com/nexus/content/repositories/releases</url>
+        </repository>
+        <snapshotRepository>
+            <id>salsadev</id>
+            <name>salsadev</name>
+            <url>http://mvn.salsadev.com/nexus/content/repositories/snapshots</url>
+            <uniqueVersion>false</uniqueVersion>
+        </snapshotRepository>
+    </distributionManagement>
   
     <build>
         <plugins>
