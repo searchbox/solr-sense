@@ -5,7 +5,6 @@ import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.List;
@@ -14,29 +13,21 @@ import java.util.logging.Level;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.document.Document;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Fields;
-
-
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.queries.CustomScoreProvider;
-import org.apache.lucene.search.Query;
-
-
 import org.apache.lucene.queries.CustomScoreQuery;
-import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.UnicodeUtil;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

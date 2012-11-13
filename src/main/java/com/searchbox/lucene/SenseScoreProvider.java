@@ -99,7 +99,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
         Terms terms = context.reader().getTermVector(doc, this.senseField);
         Map<String, Integer> termFreqMap = getTermFreqmapfromTerms(terms);
 
-        LOGGER.info("Evaluating Document with TF size: " + termFreqMap.size());
+        
+        if(LOGGER.isDebugEnabled())
+            LOGGER.debug("Evaluating Document with TF size: " + termFreqMap.size());
+
         if(LOGGER.isTraceEnabled()){
             for (String t : termFreqMap.keySet()) {
                 LOGGER.trace("term: |" + t + "| -- frequ: " + termFreqMap.get(t));
@@ -113,16 +116,19 @@ public class SenseScoreProvider extends CustomScoreProvider {
         if (senseWeight != 0.0) {
             DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
             ckbscore = dvector.getDistance(qvector);
-            LOGGER.info("ckbscore: " + ckbscore);
+             if(LOGGER.isDebugEnabled())
+                LOGGER.debug("ckbscore: " + ckbscore);
         }
         if (senseWeight != 1.0) {
             RealTermFreqVector dtfidf =ckb.getTfIdfVector(termFreqMap);
             idfscore= dtfidf.getUnitVector().getDistance(qtfidf);
-            LOGGER.info("idfscore: " + idfscore);
+             if(LOGGER.isDebugEnabled())
+                LOGGER.debug("idfscore: " + idfscore);
         }
         
         float finalscore=(float) (senseWeight*ckbscore+(1-senseWeight)*idfscore);
-        LOGGER.info("Final score "+ finalscore);
+         if(LOGGER.isDebugEnabled())
+            LOGGER.debug("Final score "+ finalscore);
         return finalscore; 
     }
 
