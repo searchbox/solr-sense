@@ -113,6 +113,7 @@ public class CognitiveKnowledgeBase {
                 out.set(key, freqs[zz]*lval, out.getNextpos());
             }
         }
+        out.setSize(out.getNextpos());
         return out;
     }
     

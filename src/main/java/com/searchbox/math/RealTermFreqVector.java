@@ -14,8 +14,16 @@ public class RealTermFreqVector {
 
     private String[] terms;
     private float[] freqs;
+    int size;
     int nextpos;
 
+    
+    public int getSize(){
+        return this.size;
+    }
+    public void setSize(int size){
+        this.size=size;
+    }
     public String[] getTerms() {
         return terms;
     }
@@ -28,9 +36,6 @@ public class RealTermFreqVector {
         return freqs;
     }
 
-    public int getSize() {
-        return terms.length;
-    }
     public void setFreqs(float[] freqs) {
         this.freqs = freqs;
     }
@@ -39,12 +44,13 @@ public class RealTermFreqVector {
         terms= new String[size];
         freqs= new float[size];
         nextpos=0;
+        this.size=size;
     }
     
     public RealTermFreqVector(String[] terms, float[] freqs) {
         this.terms = terms;
         this.freqs = freqs;
-        
+        this.size=terms.length;
     }
     
     public int getNextpos() {
@@ -58,11 +64,12 @@ public class RealTermFreqVector {
         int greaterorless;
         String terms_right[] = other.getTerms();
         float freqs_right[] = other.getFreqs();
+        int size_right = other.getSize();
         int spotleft = terms.length == 0 ? java.lang.Integer.MAX_VALUE : 0;
         int spotright = terms_right.length == 0 ? java.lang.Integer.MAX_VALUE : 0;
 
         while (true) {
-            if (spotleft >= terms.length) {
+            if (spotleft >= size) {
                 // finish right side
                 for (; spotright < terms_right.length; spotright++) {
                     distance += freqs_right[spotright] * freqs_right[spotright];
@@ -70,7 +77,7 @@ public class RealTermFreqVector {
                 break;
             }
 
-            if (spotright >= terms_right.length) {
+            if (spotright >= size_right) {
                 for (; spotleft < terms.length; spotleft++) {
                     distance += freqs[spotleft] * freqs[spotleft];
                 }
@@ -100,14 +107,14 @@ public class RealTermFreqVector {
     public RealTermFreqVector getUnitVector() {
         float norm = 0;
 
-        for (int zz = 0; zz < freqs.length; zz++) {
+        for (int zz = 0; zz < size; zz++) {
             norm += freqs[zz] * freqs[zz];
         }
 
         norm = (float) Math.sqrt(norm);
 
         float[] newfreqs = freqs;
-        for (int zz = 0; zz < freqs.length; zz++) {
+        for (int zz = 0; zz < size; zz++) {
             newfreqs[zz] = freqs[zz] / norm;
         }
 
@@ -124,6 +131,7 @@ public class RealTermFreqVector {
             freqs[zz] = (float) termFreqMap.get(terms[zz]);
         }
         nextpos = terms.length;
+        size=terms.length;
     }
     
     public void set(String term, float freq, int pos) {
