@@ -69,8 +69,9 @@ public class SenseScoreProvider extends CustomScoreProvider {
      */
 
     public static RealTermFreqVector getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
-        RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
+
         if (terms != null) {
+            RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
             final TermsEnum termsEnum = terms.iterator(null);
             BytesRef text;
             while ((text = termsEnum.next()) != null) {
@@ -79,8 +80,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 final int freq = (int) termsEnum.totalTermFreq();
                 rtfv.set(term, freq, rtfv.getNextpos());
             }
+            return rtfv;
+        } else {
+            return new RealTermFreqVector(0);
         }
-        return rtfv;
     }
     
     @Override
