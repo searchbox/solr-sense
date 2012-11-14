@@ -4,9 +4,7 @@
  */
 package com.searchbox.math;
 
-import com.searchbox.utils.TermFreqContainer;
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.Map;
 
 /**
  *
@@ -14,69 +12,123 @@ import java.util.Map.Entry;
  */
 public class RealTermFreqVector {
 
-    private Map<String, Float> index;
+    private String[] terms;
+    private float[] freqs;
+    int nextpos;
 
-    public Map<String, Float> getData() {
-        return index;
+    public String[] getTerms() {
+        return terms;
     }
 
-    public void setIndex(Map<String, Float> index) {
-        this.index = index;
+    public void setTerms(String[] terms) {
+        this.terms = terms;
     }
 
-    public RealTermFreqVector(Map<String, Float> termFreqMap) {
-        this.index = termFreqMap;
+    public float[] getFreqs() {
+        return freqs;
     }
 
-    public RealTermFreqVector(TermFreqContainer tfc) {
-        this.index = new HashMap<String, Float>();
-        for (int zz = 0; zz < tfc.getSize(); zz++) {
-            index.put(tfc.getTerms()[zz], tfc.getFreqs()[zz]);
-        }
+    public int getSize() {
+        return terms.length;
+    }
+    public void setFreqs(float[] freqs) {
+        this.freqs = freqs;
+    }
 
+    public RealTermFreqVector(int size) {
+        terms= new String[size];
+        freqs= new float[size];
+        nextpos=0;
+    }
+    
+    public RealTermFreqVector(String[] terms, float[] freqs) {
+        this.terms = terms;
+        this.freqs = freqs;
+        
+    }
+    
+    public int getNextpos() {
+        nextpos++;
+        return nextpos-1;
     }
 
     public float getDistance(final RealTermFreqVector other) {
         float distance = 0;
-        float ldiff = 0;
-        Collection<String> totalterms = new HashSet<String>();
+        float tempval = 0;
+        int greaterorless;
+        String terms_right[] = other.getTerms();
+        float freqs_right[] = other.getFreqs();
+        int spotleft = terms.length == 0 ? java.lang.Integer.MAX_VALUE : 0;
+        int spotright = terms_right.length == 0 ? java.lang.Integer.MAX_VALUE : 0;
 
-        totalterms.addAll(this.index.keySet());
-        totalterms.addAll(other.index.keySet());
-
-        for (String term : totalterms) {
-            Float v1 = index.get(term);
-            if (v1 == null) {
-                v1 = 0.0f;
+        while (true) {
+            if (spotleft >= terms.length) {
+                // finish right side
+                for (; spotright < terms_right.length; spotright++) {
+                    distance += freqs_right[spotright] * freqs_right[spotright];
+                }
+                break;
             }
 
-            Float v2 = other.index.get(term);
-            if (v2 == null) {
-                v2 = 0.0f;
+            if (spotright >= terms_right.length) {
+                for (; spotleft < terms.length; spotleft++) {
+                    distance += freqs[spotleft] * freqs[spotleft];
+                }
+
+                break;
             }
-            ldiff = v1 - v2;
-            distance += ldiff * ldiff;
+
+            greaterorless = terms[spotleft].compareTo(terms_right[spotright]);
+            if (greaterorless > 0) {
+                distance += freqs[spotleft] * freqs[spotleft];
+                spotleft++;
+            } else if (greaterorless < 0) {
+                distance += freqs_right[spotright] * freqs_right[spotright];
+                spotright++;
+            } else { // right and left the same
+                tempval = freqs[spotleft] - freqs_right[spotright];
+                distance += tempval * tempval;
+                spotleft++;
+                spotright++;
+            }
+
+
         }
-        return (float) Math.sqrt(distance);
+        return distance;
     }
 
     public RealTermFreqVector getUnitVector() {
-        Map<String, Float> termFreqMap = new HashMap<String, Float>(index);
         float norm = 0;
-        float val = 0;
 
-        for (Entry<String, Float> term : index.entrySet()) {
-            val = term.getValue();
-            norm += val * val;
+        for (int zz = 0; zz < freqs.length; zz++) {
+            norm += freqs[zz] * freqs[zz];
         }
+
         norm = (float) Math.sqrt(norm);
 
-        for (Entry<String, Float> term : termFreqMap.entrySet()) {
-            val = term.getValue();
-            val = val / norm;
-            termFreqMap.put(term.getKey(), val);
+        float[] newfreqs = freqs;
+        for (int zz = 0; zz < freqs.length; zz++) {
+            newfreqs[zz] = freqs[zz] / norm;
         }
 
-        return new RealTermFreqVector(termFreqMap);
+        return new RealTermFreqVector(terms, newfreqs);
     }
+    
+    
+    public RealTermFreqVector(Map<String, Float> termFreqMap) {
+        terms = termFreqMap.keySet().toArray(new String[0]);
+        java.util.Arrays.sort(terms);
+        
+        freqs = new float[terms.length];
+        for (int zz = 0; zz < terms.length; zz++) {
+            freqs[zz] = (float) termFreqMap.get(terms[zz]);
+        }
+        nextpos = terms.length;
+    }
+    
+    public void set(String term, float freq, int pos) {
+        terms[pos]=term;
+        freqs[pos]=freq;
+    }
+    
 }

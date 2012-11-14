@@ -7,7 +7,6 @@ package com.searchbox.sense;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.utils.SystemUtils;
-import com.searchbox.utils.TermFreqContainer;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -84,17 +83,19 @@ public class CognitiveKnowledgeBase {
         return this.col.keySet();
     }
 
-    //TODO make a recycable class for Integer (cf MLT).
-    public DoubleFullVector getFullCkbVector(final Map<String, Integer> termFreqMap) {
+    public DoubleFullVector getFullCkbVector(final RealTermFreqVector tfc) {
         float[] vector = new float[this.getColumnDimension()];
-        for (Entry<String, Integer> tf : termFreqMap.entrySet()) {
-            final String term = tf.getKey();
+        int maxSize = tfc.getSize();
+        String terms[] = tfc.getTerms();
+        float freqs[] = tfc.getFreqs();
+        for (int zz = 0; zz < maxSize; zz++) {
+            String term = terms[zz];
             final float[] termValues = val.get(term);
             if (termValues == null) {
                 continue;
             }
             final int[] termCols = col.get(term);
-            final float termFrequencies = tf.getValue();
+            final float termFrequencies = freqs[zz];
             for (int i = 0; i < termCols.length; i++) {
                 vector[termCols[i]] += termFrequencies * termValues[i];
             }
@@ -102,49 +103,19 @@ public class CognitiveKnowledgeBase {
         return new DoubleFullVector(vector);
     }
     
-    
-    public DoubleFullVector getFullCkbVector(final TermFreqContainer tfc) {
-        float[] vector = new float[this.getColumnDimension()];
-        for (int zz=0;zz<tfc.getSize() ; zz++) {
-            String term= tfc.getTerms()[zz];
-            final float[] termValues = val.get(term);
-            if (termValues == null) {
-                continue;
-            }
-            final int[] termCols = col.get(term);
-            final float termFrequencies = tfc.getFreqs()[zz];
-            for (int i = 0; i < termCols.length; i++) {
-                vector[termCols[i]] += termFrequencies * termValues[i];
+    public RealTermFreqVector getTfIdfVector(RealTermFreqVector tfc) {
+        RealTermFreqVector out = new RealTermFreqVector(tfc.getSize());
+        int maxSize = tfc.getSize();
+        String [] terms=tfc.getTerms();
+        float [] freqs= tfc.getFreqs();
+        for (int zz=0;zz<maxSize;zz++) {
+            String key = terms[zz];
+            Float lval=idf.get(key);
+            if (lval!=null) {
+                out.set(key, freqs[zz]*lval, zz);
             }
         }
-        return new DoubleFullVector(vector);
-    }
-    
-    
-
-    public RealTermFreqVector getTfIdfVector(Map<String, Integer> termFreqMap) {
-        Map<String, Float> termFreqMapOut= new HashMap<String,Float>();
-        for (Entry<String, Integer> tf : termFreqMap.entrySet()) {
-            String key = tf.getKey();
-            Float val=idf.get(key);
-            if (val!=null) {
-                termFreqMapOut.put(key, new Float(tf.getValue()*val));
-            }
-        }
-        return new RealTermFreqVector(termFreqMapOut);
-    }
-    
-    
-    public RealTermFreqVector getTfIdfVector(TermFreqContainer tfc) {
-        TermFreqContainer out = new TermFreqContainer(tfc.getSize());
-        for (int zz=0;zz<tfc.getSize();zz++) {
-            String key = tfc.getTerms()[zz];
-            Float val=idf.get(key);
-            if (val!=null) {
-                out.set(key, tfc.getFreqs()[zz]*val, zz);
-            }
-        }
-        return new RealTermFreqVector(tfc);
+        return new RealTermFreqVector(tfc.getTerms(),tfc.getFreqs());
     }
     
 

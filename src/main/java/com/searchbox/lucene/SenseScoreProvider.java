@@ -7,11 +7,11 @@ package com.searchbox.lucene;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
-import com.searchbox.utils.TermFreqContainer;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.DocsEnum;
 import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -96,8 +96,8 @@ public class SenseScoreProvider extends CustomScoreProvider {
     
     
     
-    public TermFreqContainer getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
-        TermFreqContainer tfc = new TermFreqContainer((int) terms.size());
+    public static RealTermFreqVector getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
+        RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
         if (terms != null) {
             final TermsEnum termsEnum = terms.iterator(null);
             BytesRef text;
@@ -105,10 +105,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
 
                 final String term = text.utf8ToString();
                 final int freq = (int) termsEnum.totalTermFreq();
-                tfc.set(term, freq, tfc.getNextpos());
+                rtfv.set(term, freq, rtfv.getNextpos());
             }
         }
-        return tfc;
+        return rtfv;
     }
     
     
@@ -120,15 +120,14 @@ public class SenseScoreProvider extends CustomScoreProvider {
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         
         Terms terms = context.reader().getTermVector(doc, this.senseField);
-        
-        TermFreqContainer tfc= getTermFreqmapfromTermsContainer(terms);
+        RealTermFreqVector rtfv= getTermFreqmapfromTermsContainer(terms);
 
         if(LOGGER.isDebugEnabled())
-            LOGGER.debug("Evaluating Document with TF size: " + tfc.getSize());
+            LOGGER.debug("Evaluating Document with TF size: " + rtfv.getSize());
 
         if(LOGGER.isTraceEnabled()){
-            for (int zz=0;zz<tfc.getSize();zz++) {
-                LOGGER.trace("term: |" + tfc.getTerms()[zz] + "| -- frequ: " + tfc.getFreqs()[zz]);
+            for (int zz=0;zz<rtfv.getSize();zz++) {
+                LOGGER.trace("term: |" + rtfv.getTerms()[zz] + "| -- frequ: " + rtfv.getFreqs()[zz]);
             }
         }
         
@@ -137,13 +136,13 @@ public class SenseScoreProvider extends CustomScoreProvider {
         double idfscore=0;
         
         if (senseWeight != 0.0) {
-            DoubleFullVector dvector = ckb.getFullCkbVector(tfc).getUnitVector();
+            DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
             ckbscore = dvector.getDistance(qvector);
              if(LOGGER.isDebugEnabled())
                 LOGGER.debug("ckbscore: " + ckbscore);
         }
         if (senseWeight != 1.0) {
-            RealTermFreqVector dtfidf =ckb.getTfIdfVector(tfc);
+            RealTermFreqVector dtfidf =ckb.getTfIdfVector(rtfv);
             idfscore= dtfidf.getUnitVector().getDistance(qtfidf);
              if(LOGGER.isDebugEnabled())
                 LOGGER.debug("idfscore: " + idfscore);
