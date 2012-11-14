@@ -156,14 +156,15 @@ public class SenseLikeThisHandler extends RequestHandlerBase
             MoreLikeThis mlt = new MoreLikeThis(searcher.getIndexReader());
             String[] mltfl = new String[]{params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)};
             mlt.setFieldNames(mltfl);
-         
-                    int id = iterator.nextDoc();
+            
+            int id = iterator.nextDoc();
 
           System.out.println("XXXXXXXXXXXXXXXXXXXX\n\n Query: " + mlt.like(id) + "\n\nXXXXXXXXXXXXX");
           if(filters == null){
               filters = new ArrayList<Query>();
           }
           filters.add(mlt.like(id));
+          System.out.println("Adding document ID of:\t "+id);
           slt = SenseQuery.SenseQueryForDocument(id, searcher.getIndexReader(),
                   params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
                   params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);

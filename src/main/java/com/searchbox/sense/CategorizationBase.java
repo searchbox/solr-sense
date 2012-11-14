@@ -76,7 +76,7 @@ public class CategorizationBase {
             }
             RealTermFreqVector protodn=protod.getUnitVector();
             RandomAccessSparseVector rowVector=new RandomAccessSparseVector(10000,10);
-            for (Entry<String,Double> term : protodn.getData().entrySet()){
+            for (Entry<String,Float> term : protodn.getData().entrySet()){
                 Integer termcol=tdic.get(term.getKey());
                 if(termcol==null) {
                     tdic.put(term.getKey(), col);
@@ -111,7 +111,7 @@ public class CategorizationBase {
     
     public double categorize(RealTermFreqVector querytf){
         RealTermFreqVector querytfnormalized=querytf.getUnitVector();
-        double missing_err=0;
+        float missing_err=0;
         
         /*
             lindxtoremove=ones(size(TFVectors,2),1);
@@ -122,7 +122,7 @@ public class CategorizationBase {
             query=calcnormq(TFVectors);*/
         
         SparseMatrix querym=new SparseMatrix(1,Model.rowSize());
-        for (Entry<String,Double> term : querytfnormalized.getData().entrySet()){
+        for (Entry<String,Float> term : querytfnormalized.getData().entrySet()){
                 Integer termcol=tdic.get(term.getKey());
                 if(termcol==null) {
                     missing_err+=term.getValue()*term.getValue();

@@ -7,6 +7,7 @@ package com.searchbox.sense;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.utils.SystemUtils;
+import com.searchbox.utils.TermFreqContainer;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,18 +39,18 @@ public class CognitiveKnowledgeBase {
         FULL
     }
     
-    private final double certainyValue;
-    private final double maximumDistance;
+    private final float certainyValue;
+    private final float maximumDistance;
     private final String name;
     private final int dimentionality;
 
     private final Map<String, int[]> col;
-    private final Map<String, double[]> val;
-    private final Map<String, Double> idf;
+    private final Map<String, float[]> val;
+    private final Map<String, Float> idf;
 
     private CognitiveKnowledgeBase(final String name, final Map<String, int[]> col,
-            final Map<String, double[]> val, final Map<String, Double> idf, final int dimentionality,
-            final double certainyValue, final double maximumDistance) {
+            final Map<String, float[]> val, final Map<String, Float> idf, final int dimentionality,
+            final float certainyValue, final float maximumDistance) {
         this.name = name;
         this.col = col;
         this.val = val;
@@ -59,11 +60,11 @@ public class CognitiveKnowledgeBase {
         this.idf = idf;
     }
 
-    public double getCertainyValue() {
+    public float getCertainyValue() {
         return certainyValue;
     }
 
-    public double getMaximumDistance() {
+    public float getMaximumDistance() {
         return maximumDistance;
     }
 
@@ -85,41 +86,75 @@ public class CognitiveKnowledgeBase {
 
     //TODO make a recycable class for Integer (cf MLT).
     public DoubleFullVector getFullCkbVector(final Map<String, Integer> termFreqMap) {
-        double[] vector = new double[this.getColumnDimension()];
+        float[] vector = new float[this.getColumnDimension()];
         for (Entry<String, Integer> tf : termFreqMap.entrySet()) {
             final String term = tf.getKey();
-            final double[] termValues = val.get(term);
+            final float[] termValues = val.get(term);
             if (termValues == null) {
                 continue;
             }
             final int[] termCols = col.get(term);
-            final double termFrequencies = tf.getValue();
+            final float termFrequencies = tf.getValue();
             for (int i = 0; i < termCols.length; i++) {
                 vector[termCols[i]] += termFrequencies * termValues[i];
             }
         }
         return new DoubleFullVector(vector);
     }
+    
+    
+    public DoubleFullVector getFullCkbVector(final TermFreqContainer tfc) {
+        float[] vector = new float[this.getColumnDimension()];
+        for (int zz=0;zz<tfc.getSize() ; zz++) {
+            String term= tfc.getTerms()[zz];
+            final float[] termValues = val.get(term);
+            if (termValues == null) {
+                continue;
+            }
+            final int[] termCols = col.get(term);
+            final float termFrequencies = tfc.getFreqs()[zz];
+            for (int i = 0; i < termCols.length; i++) {
+                vector[termCols[i]] += termFrequencies * termValues[i];
+            }
+        }
+        return new DoubleFullVector(vector);
+    }
+    
+    
 
     public RealTermFreqVector getTfIdfVector(Map<String, Integer> termFreqMap) {
-        Map<String, Double> termFreqMapOut= new HashMap<String,Double>();
+        Map<String, Float> termFreqMapOut= new HashMap<String,Float>();
         for (Entry<String, Integer> tf : termFreqMap.entrySet()) {
             String key = tf.getKey();
-            Double val=idf.get(key);
+            Float val=idf.get(key);
             if (val!=null) {
-                termFreqMapOut.put(key, new Double(tf.getValue()*val));
+                termFreqMapOut.put(key, new Float(tf.getValue()*val));
             }
         }
         return new RealTermFreqVector(termFreqMapOut);
     }
+    
+    
+    public RealTermFreqVector getTfIdfVector(TermFreqContainer tfc) {
+        TermFreqContainer out = new TermFreqContainer(tfc.getSize());
+        for (int zz=0;zz<tfc.getSize();zz++) {
+            String key = tfc.getTerms()[zz];
+            Float val=idf.get(key);
+            if (val!=null) {
+                out.set(key, tfc.getFreqs()[zz]*val, zz);
+            }
+        }
+        return new RealTermFreqVector(tfc);
+    }
+    
 
-    public double computeSimilarity(DoubleFullVector q, DoubleFullVector t) {
+    public float computeSimilarity(DoubleFullVector q, DoubleFullVector t) {
         return q.getDistance(t);
     }
 
-    private double getIdf(final String stem) {
-        final Double val = idf.get(stem);
-        return val == null ? 0.0 : val;
+    private float getIdf(final String stem) {
+        final Float val = idf.get(stem);
+        return val == null ? 0.0f : val;
     }
 
     // Explicit number of terms present in CKB
@@ -133,7 +168,7 @@ public class CognitiveKnowledgeBase {
 
     public static CognitiveKnowledgeBase loadSparseCKB(String name, String baseDirectory,
             String modelFile, String idfFile, String dictionaryFile,
-            double certainyValue, double maximumDistance) {
+            float certainyValue, float maximumDistance) {
         CognitiveKnowledgeBase ckb = null;
         BufferedReader in = null;
         try {
@@ -142,12 +177,12 @@ public class CognitiveKnowledgeBase {
             ArrayList<String> terms = CognitiveKnowledgeBase.loadDictionary(new File(baseDirectory + dictionaryFile));
             LOGGER.info("Dictionary loaded with " + terms.size() + " terms.");
             Map<String, List<Integer>> col = new HashMap<String, List<Integer>>();
-            Map<String, List<Double>> val = new HashMap<String, List<Double>>();
+            Map<String, List<Float>> val = new HashMap<String, List<Float>>();
 
             //Init the col and val data struct to save time later...
             for (String term : terms) {
                 col.put(term, new ArrayList<Integer>());
-                val.put(term, new ArrayList<Double>());
+                val.put(term, new ArrayList<Float>());
             }
             
             LOGGER.info("Loadign CKB data from: " + baseDirectory + modelFile);
@@ -173,13 +208,13 @@ public class CognitiveKnowledgeBase {
 
                 final String term = terms.get(Integer.valueOf(dline[0]));
                 col.get(term).add(Integer.valueOf(dline[1]));
-                val.get(term).add(Double.valueOf(dline[2]));
+                val.get(term).add(Float.valueOf(dline[2]));
                 ival++;
             }
             LOGGER.info("Loaded " + ival + " values in CKB");
 
             final Map<String, int[]> coll = new HashMap<String, int[]>();
-            final Map<String, double[]> vall = new HashMap<String, double[]>();
+            final Map<String, float[]> vall = new HashMap<String, float[]>();
             
             LOGGER.info("Transforming col array");
             for (Entry<String, List<Integer>> _col : col.entrySet()) {
@@ -192,11 +227,11 @@ public class CognitiveKnowledgeBase {
             }
             
             LOGGER.info("Transforming val array");
-            for (Entry<String, List<Double>> _val : val.entrySet()) {
-                double[] tval = new double[_val.getValue().size()];
+            for (Entry<String, List<Float>> _val : val.entrySet()) {
+                float[] tval = new float[_val.getValue().size()];
                 int count = 0;
-                for (Double i : _val.getValue()) {
-                    tval[count++] = i.doubleValue();
+                for (Float i : _val.getValue()) {
+                    tval[count++] = i.floatValue();
                 }
                 vall.put(_val.getKey(), tval);
             }
@@ -209,7 +244,7 @@ public class CognitiveKnowledgeBase {
 
             LOGGER.info("Loadign idf data from: " + baseDirectory + idfFile);
             
-            Map<String, Double> idf  = CognitiveKnowledgeBase.loadIdf(new File(baseDirectory + idfFile));
+            Map<String, Float> idf  = CognitiveKnowledgeBase.loadIdf(new File(baseDirectory + idfFile));
             
             LOGGER.info("Done. idf has size: " + idf.size());
             
@@ -275,8 +310,8 @@ public class CognitiveKnowledgeBase {
 
     
 
-    private static Map<String, Double> loadIdf(File idfFile) {
-        Map<String, Double> idf = new HashMap<String, Double>();
+    private static Map<String, Float> loadIdf(File idfFile) {
+        Map<String, Float> idf = new HashMap<String, Float>();
         try {
      
             LOGGER.debug("Loading idf from file: " + idfFile.getName());
@@ -287,7 +322,7 @@ public class CognitiveKnowledgeBase {
                 while ((idfline = fin.readLine()) != null) {
                     final String[] parts = idfline.trim().split("\\s");
                     final String term = parts[0];
-                    final double value = Double.parseDouble(parts[1]);
+                    final float value = Float.parseFloat(parts[1]);
                     idf.put(term, value);
                 }
             } catch (IOException e) {

@@ -65,8 +65,8 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
                         params.get("baseDirectory"), params.get("modelFile"),
                         //TODO shoudl be logical path
                         params.get("idfFile"), params.get("dictionaryFile"),
-                        Double.parseDouble(params.get("certaintyValue")),
-                        Double.parseDouble(params.get("maximumDistance")));
+                        Float.parseFloat(params.get("certaintyValue")),
+                        Float.parseFloat(params.get("maximumDistance")));
                 ckbByID.put(ckb.getName(0), ckb_);
             }
 
@@ -99,11 +99,11 @@ class SenseQParser extends QParser {
     private double getSenseWeight(final SolrParams localParams, final SolrParams solrParams){
         //TODO check if null then 1.0;
         String val;
-        Double dval;
+        Float dval;
         if((val = solrParams.get(SenseParams.SENSE_WEIGHT))!=null)
-            dval = Double.parseDouble(val);
+            dval = Float.parseFloat(val);
         else if((val = localParams.get(SenseParams.SENSE_WEIGHT))!=null)
-            dval = Double.parseDouble(val);
+            dval = Float.parseFloat(val);
         else 
             dval = SenseParams.DEFAULT_SENSE_WEIGHT;
         

@@ -7,6 +7,7 @@ package com.searchbox.lucene;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
+import com.searchbox.utils.TermFreqContainer;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -93,19 +94,41 @@ public class SenseScoreProvider extends CustomScoreProvider {
         return termFreqMap;
     }
     
+    
+    
+    public TermFreqContainer getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
+        TermFreqContainer tfc = new TermFreqContainer((int) terms.size());
+        if (terms != null) {
+            final TermsEnum termsEnum = terms.iterator(null);
+            BytesRef text;
+            while ((text = termsEnum.next()) != null) {
+
+                final String term = text.utf8ToString();
+                final int freq = (int) termsEnum.totalTermFreq();
+                tfc.set(term, freq, tfc.getNextpos());
+            }
+        }
+        return tfc;
+    }
+    
+    
+    
+    
+    
+    
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         
         Terms terms = context.reader().getTermVector(doc, this.senseField);
-        Map<String, Integer> termFreqMap = getTermFreqmapfromTerms(terms);
-
         
+        TermFreqContainer tfc= getTermFreqmapfromTermsContainer(terms);
+
         if(LOGGER.isDebugEnabled())
-            LOGGER.debug("Evaluating Document with TF size: " + termFreqMap.size());
+            LOGGER.debug("Evaluating Document with TF size: " + tfc.getSize());
 
         if(LOGGER.isTraceEnabled()){
-            for (String t : termFreqMap.keySet()) {
-                LOGGER.trace("term: |" + t + "| -- frequ: " + termFreqMap.get(t));
+            for (int zz=0;zz<tfc.getSize();zz++) {
+                LOGGER.trace("term: |" + tfc.getTerms()[zz] + "| -- frequ: " + tfc.getFreqs()[zz]);
             }
         }
         
@@ -114,13 +137,13 @@ public class SenseScoreProvider extends CustomScoreProvider {
         double idfscore=0;
         
         if (senseWeight != 0.0) {
-            DoubleFullVector dvector = ckb.getFullCkbVector(termFreqMap).getUnitVector();
+            DoubleFullVector dvector = ckb.getFullCkbVector(tfc).getUnitVector();
             ckbscore = dvector.getDistance(qvector);
              if(LOGGER.isDebugEnabled())
                 LOGGER.debug("ckbscore: " + ckbscore);
         }
         if (senseWeight != 1.0) {
-            RealTermFreqVector dtfidf =ckb.getTfIdfVector(termFreqMap);
+            RealTermFreqVector dtfidf =ckb.getTfIdfVector(tfc);
             idfscore= dtfidf.getUnitVector().getDistance(qtfidf);
              if(LOGGER.isDebugEnabled())
                 LOGGER.debug("idfscore: " + idfscore);

@@ -31,7 +31,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
     public static void setUp() throws Exception {
         TestCognitiveKnowledgeBase.CKB = CognitiveKnowledgeBase.loadSparseCKB("test",
                 "./src/test/resources/CKB/pubmed/", "pubmed.cache",
-                "pubmed.idflog", "pubmed.tdic", 1.0, 1.0);
+                "pubmed.idflog", "pubmed.tdic", 1.0f, 1.0f);
     }
 
     @Test
@@ -132,7 +132,7 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         assertTrue("Vector has different dim than CKB", vector.getDimension() == CKB.getDimentionality());
 
 
-        double[] vectordata = vector.getData();
+        float[] vectordata = vector.getData();
         double score = 0;
         double val = 0;
         for (int zz = 0; zz < ground_truth.length; zz++) {
@@ -208,30 +208,30 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         double ground_truth= 1.4142135623731;
         
         
-        Map<String, Double> tf1_ground = new HashMap<String, Double>();
-        tf1_ground.put("pheser", 9.8752);
-        tf1_ground.put("ccpvdz", 19.7504);
-        tf1_ground.put("snaploop", 29.6256);
-        tf1_ground.put("preconnect", 39.5008);
-        tf1_ground.put("poseinvari", 49.376);
-        tf1_ground.put("mulatta", 59.2512);
-        tf1_ground.put("twopap", 66.2879);
-        tf1_ground.put("flexibl", 28.5728);
-        tf1_ground.put("fossil", 55.026);
-        tf1_ground.put("group", 28.386);
+        Map<String, Float> tf1_ground = new HashMap<String, Float>();
+        tf1_ground.put("pheser", 9.8752f);
+        tf1_ground.put("ccpvdz", 19.7504f);
+        tf1_ground.put("snaploop", 29.6256f);
+        tf1_ground.put("preconnect", 39.5008f);
+        tf1_ground.put("poseinvari", 49.376f);
+        tf1_ground.put("mulatta", 59.2512f);
+        tf1_ground.put("twopap", 66.2879f);
+        tf1_ground.put("flexibl", 28.5728f);
+        tf1_ground.put("fossil", 55.026f);
+        tf1_ground.put("group", 28.386f);
         
         
-        Map<String, Double> tf1_ground_norm = new HashMap<String, Double>();
-        tf1_ground_norm.put("pheser", 0.0737728082379262);
-        tf1_ground_norm.put("ccpvdz", 0.147545616475852);
-        tf1_ground_norm.put("snaploop", 0.221318424713779);
-        tf1_ground_norm.put("preconnect", 0.295091232951705);
-        tf1_ground_norm.put("poseinvari", 0.368864041189631);
-        tf1_ground_norm.put("mulatta", 0.442636849427557);
-        tf1_ground_norm.put("twopap",  0.49520460701503);
-        tf1_ground_norm.put("flexibl", 0.213453468812846);
-        tf1_ground_norm.put("fossil",  0.411072438644293);
-        tf1_ground_norm.put("group", 0.212057977017354);
+        Map<String, Float> tf1_ground_norm = new HashMap<String, Float>();
+        tf1_ground_norm.put("pheser", 0.0737728082379262f);
+        tf1_ground_norm.put("ccpvdz", 0.147545616475852f);
+        tf1_ground_norm.put("snaploop", 0.221318424713779f);
+        tf1_ground_norm.put("preconnect", 0.295091232951705f);
+        tf1_ground_norm.put("poseinvari", 0.368864041189631f);
+        tf1_ground_norm.put("mulatta", 0.442636849427557f);
+        tf1_ground_norm.put("twopap",  0.49520460701503f);
+        tf1_ground_norm.put("flexibl", 0.213453468812846f);
+        tf1_ground_norm.put("fossil",  0.411072438644293f);
+        tf1_ground_norm.put("group", 0.212057977017354f);
         
         Map<String, Integer> tf1 = new HashMap<String, Integer>();
         Map<String, Integer> tf2 = new HashMap<String, Integer>();
