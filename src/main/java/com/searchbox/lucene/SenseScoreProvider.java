@@ -67,35 +67,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @param valSrcScores scores of that doc by the ValueSourceQuery.
      * @return custom score.
      */
-    
-    public Map<String, Integer> getTermFreqmapfromTerms(Terms terms) throws IOException 
-    {
-        Map<String, Integer> termFreqMap = new HashMap<String, Integer>();
-        if (terms != null) {
-            final TermsEnum termsEnum = terms.iterator(null);
-            BytesRef text;
-            final CharsRef spare = new CharsRef();
-            while ((text = termsEnum.next()) != null) {
-                UnicodeUtil.UTF8toUTF16(text, spare);
-                final String term = spare.toString();
 
-                final int freq = (int) termsEnum.totalTermFreq();
-
-                // increment frequency
-                Integer cnt = termFreqMap.get(term);
-                if (cnt == null) {
-                    cnt = new Integer(freq);
-                    termFreqMap.put(term, cnt);
-                } else {
-                    cnt += freq;
-                }
-            }
-        }
-        return termFreqMap;
-    }
-    
-    
-    
     public static RealTermFreqVector getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
         RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
         if (terms != null) {
@@ -110,11 +82,6 @@ public class SenseScoreProvider extends CustomScoreProvider {
         }
         return rtfv;
     }
-    
-    
-    
-    
-    
     
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
