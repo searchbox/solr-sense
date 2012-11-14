@@ -47,10 +47,10 @@ public class RealTermFreqVector {
         this.size=size;
     }
     
-    public RealTermFreqVector(String[] terms, float[] freqs) {
+    public RealTermFreqVector(String[] terms, float[] freqs, int size) {
         this.terms = terms;
         this.freqs = freqs;
-        this.size=terms.length;
+        this.size=size;
     }
     
     public int getNextpos() {
@@ -118,7 +118,7 @@ public class RealTermFreqVector {
             newfreqs[zz] = freqs[zz] / norm;
         }
 
-        return new RealTermFreqVector(terms, newfreqs);
+        return new RealTermFreqVector(terms, newfreqs, size);
     }
     
     
