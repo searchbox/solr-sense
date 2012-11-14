@@ -31,9 +31,7 @@ public class CognitiveKnowledgeBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveKnowledgeBase.class);
 
-   
-
-    public enum Type {
+   public enum Type {
         SPARSE,
         FULL
     }
@@ -112,7 +110,7 @@ public class CognitiveKnowledgeBase {
             String key = terms[zz];
             Float lval=idf.get(key);
             if (lval!=null) {
-                out.set(key, freqs[zz]*lval, zz);
+                out.set(key, freqs[zz]*lval, out.getNextpos());
             }
         }
         return out;

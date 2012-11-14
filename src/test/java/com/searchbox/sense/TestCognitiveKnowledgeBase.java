@@ -297,6 +297,46 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         assertTrue("Distance to other vector is not corrent!",distval<.00001);
    }
     
+
+    
+    @Test
+    public void testEmptyDoc() {
+        
+        Map<String, Float> tf1 = new HashMap<String, Float>();
+        
+        double distval;
+        RealTermFreqVector vector1_ground = new RealTermFreqVector(tf1) ;
+        RealTermFreqVector vector1 = CKB.getTfIdfVector(new RealTermFreqVector(tf1));
+        distval=Math.abs(vector1.getDistance(vector1_ground));
+        LOGGER.info("Empty Distance to self (hopefully no null pointers): "+ distval);
+        assertTrue("Distance to self is not zero!",distval<0.00001);
+        
+        
+        
+        Map<String, Float> tf2 = new HashMap<String, Float>();
+       
+        
+        tf2.put("httplglepflchteammwadaextensionsadaextensionshtml", 1f);
+        tf2.put("brainbodyrobot", 2f);
+        tf2.put("highand", 3f);
+        tf2.put("srecarg", 4f);
+        tf2.put("nontrap", 5f);
+        tf2.put("steamtocarbon", 6f);
+        tf2.put("chote", 7f);
+        tf2.put("multiphononassist", 8f);
+        tf2.put("livetim", 9f);
+        tf2.put("macroenviron", 10f);
+        
+        
+        RealTermFreqVector vector2 = CKB.getTfIdfVector(new RealTermFreqVector(tf2)).getUnitVector();
+        float classVal =vector1.getUnitVector().getDistance(vector2);
+        
+        LOGGER.info("Distance to other vector from Empty : "+ classVal);
+        assertTrue("Distance to other vector from Empty not corrent!",classVal==1.0);
+        
+        
+   }
+
     
     
     

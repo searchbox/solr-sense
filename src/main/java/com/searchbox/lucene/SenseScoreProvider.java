@@ -69,7 +69,6 @@ public class SenseScoreProvider extends CustomScoreProvider {
      */
 
     public static RealTermFreqVector getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
-
         if (terms != null) {
             RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
             final TermsEnum termsEnum = terms.iterator(null);
@@ -112,8 +111,8 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 LOGGER.debug("ckbscore: " + ckbscore);
         }
         if (senseWeight != 1.0) {
-            RealTermFreqVector dtfidf =ckb.getTfIdfVector(rtfv);
-            idfscore= dtfidf.getUnitVector().getDistance(qtfidf);
+            RealTermFreqVector dtfidf =ckb.getTfIdfVector(rtfv).getUnitVector();
+            idfscore= dtfidf.getDistance(qtfidf);
              if(LOGGER.isDebugEnabled())
                 LOGGER.debug("idfscore: " + idfscore);
         }
