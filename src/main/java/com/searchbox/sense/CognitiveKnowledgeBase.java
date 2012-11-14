@@ -115,7 +115,7 @@ public class CognitiveKnowledgeBase {
                 out.set(key, freqs[zz]*lval, zz);
             }
         }
-        return new RealTermFreqVector(tfc.getTerms(),tfc.getFreqs());
+        return out;
     }
     
 

@@ -79,10 +79,10 @@ public class RealTermFreqVector {
             }
 
             greaterorless = terms[spotleft].compareTo(terms_right[spotright]);
-            if (greaterorless > 0) {
+            if (greaterorless < 0) {
                 distance += freqs[spotleft] * freqs[spotleft];
                 spotleft++;
-            } else if (greaterorless < 0) {
+            } else if (greaterorless > 0) {
                 distance += freqs_right[spotright] * freqs_right[spotright];
                 spotright++;
             } else { // right and left the same
@@ -94,7 +94,7 @@ public class RealTermFreqVector {
 
 
         }
-        return distance;
+        return (float) Math.sqrt(distance);
     }
 
     public RealTermFreqVector getUnitVector() {

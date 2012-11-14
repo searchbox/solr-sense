@@ -280,18 +280,20 @@ public class TestCognitiveKnowledgeBase extends EmptySolrTestCase {
         RealTermFreqVector vector1 = CKB.getTfIdfVector(new RealTermFreqVector(tf1));
         distval=Math.abs(vector1.getDistance(vector1_ground));
         LOGGER.info("Distance to self (idf): "+ distval);
-        assertTrue("Distance to self is not zero!",distval<0.0000001);
+        assertTrue("Distance to self is not zero!",distval<0.00001);
         
         
         RealTermFreqVector vector1_ground_norm = new RealTermFreqVector(tf1_ground_norm) ;
         distval=Math.abs(vector1.getUnitVector().getDistance(vector1_ground_norm));
         LOGGER.info("Distance to self (idf-norm): "+ distval);
-        assertTrue("Distance to self is not zero!",distval<0.0000001);
+        assertTrue("Distance to self is not zero!",distval<0.00001);
         
         
         RealTermFreqVector vector2 = CKB.getTfIdfVector(new RealTermFreqVector(tf2)).getUnitVector();
-        distval=Math.abs(vector1.getUnitVector().getDistance(vector2)-ground_truth);
-        LOGGER.info("Distance to other vector (idf): "+ distval);
+        float classVal =vector1.getUnitVector().getDistance(vector2);
+        
+        distval=Math.abs(classVal-ground_truth);
+        LOGGER.info("Distance to other vector (idf) / expecting: "+ classVal + "\t"+ground_truth);
         assertTrue("Distance to other vector is not corrent!",distval<.00001);
    }
     
