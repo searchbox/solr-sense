@@ -117,7 +117,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 LOGGER.debug("idfscore: " + idfscore);
         }
         
-        float finalscore=(float) (senseWeight*ckbscore+(1-senseWeight)*idfscore);
+        float finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
          if(LOGGER.isDebugEnabled())
             LOGGER.debug("Final score "+ finalscore);
         return finalscore; 

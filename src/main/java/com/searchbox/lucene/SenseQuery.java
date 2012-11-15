@@ -47,6 +47,14 @@ public class SenseQuery extends CustomScoreQuery {
         return topLevelQuery;
     }
 
+    public static SenseQuery SenseQueryForDocument(RealTermFreqVector rtfv, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
+        return new SenseQuery(rtfv, senseField,
+                generateLuceneQuery(rtfv.getTerms(),senseField, filters),
+                senseWeight);
+        
+    }
+    
+    
     public static SenseQuery SenseQueryForDocument(final int id, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
 
         final Fields vectors;
