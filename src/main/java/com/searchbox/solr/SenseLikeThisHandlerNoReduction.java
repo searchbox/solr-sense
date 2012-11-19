@@ -59,7 +59,7 @@ import org.apache.solr.util.SolrPluginUtils;
  *
  * @since solr 1.3
  */
-public class SenseLikeThisHandler extends RequestHandlerBase {
+public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
     // Pattern is thread safe -- TODO? share this with general 'fl' param
 
     private static final Pattern splitList = Pattern.compile(",| ");
@@ -72,7 +72,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         SolrParams params = req.getParams();
-
+        int id;
         // Set field flags
         ReturnFields returnFields = new ReturnFields(req);
         rsp.setReturnFields(returnFields);
@@ -152,46 +152,8 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
 
                 // Create the TF of blah blah blah
                 DocIterator iterator = match.iterator();
-                if (iterator.hasNext()) {
-                    // do a MoreLikeThis query for each document in results
-
-
-                    // need to insert a MLT query here.
-                    MoreLikeThis mlt = new MoreLikeThis(searcher.getIndexReader());
-                    String[] mltfl = new String[]{params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)};
-                    mlt.setFieldNames(mltfl);
-
-                    int id = iterator.nextDoc();
-                    
-                    mlt.setMaxDocFreq(params.getInt(SenseParams.MLT_MAX_DOC_FREQ, MoreLikeThis.DEFAULT_MAX_DOC_FREQ));
-                    mlt.setMinTermFreq(params.getInt(MoreLikeThisParams.MIN_TERM_FREQ,MoreLikeThis.DEFAULT_MIN_TERM_FREQ));
-                    mlt.setMinDocFreq(params.getInt(MoreLikeThisParams.MIN_DOC_FREQ, MoreLikeThis.DEFAULT_MIN_DOC_FREQ));
-                    mlt.setMinWordLen(params.getInt(MoreLikeThisParams.MIN_WORD_LEN, MoreLikeThis.DEFAULT_MIN_WORD_LENGTH));
-                    mlt.setMaxWordLen(params.getInt(MoreLikeThisParams.MAX_WORD_LEN, MoreLikeThis.DEFAULT_MAX_WORD_LENGTH));
-                    mlt.setMaxQueryTerms(params.getInt(MoreLikeThisParams.MAX_QUERY_TERMS, MoreLikeThis.DEFAULT_MAX_QUERY_TERMS));
-                    mlt.setMaxNumTokensParsed(params.getInt(MoreLikeThisParams.MAX_NUM_TOKENS_PARSED, MoreLikeThis.DEFAULT_MAX_NUM_TOKENS_PARSED));
-                    
-                    
-                    Query mltq = mlt.like(id);
-                    filters.add(mltq);
-
-                   System.out.println("XXXXXXXXXXXXXXXXXXXX\n\n Query for doc "+id+": " + mltq + "\n\nXXXXXXXXXXXXX");
-
-                    System.out.println("Adding document ID of:\t " + id);
-
-                    TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).iterator(null);
-                    BytesRef text;
-                    while ((text = termsEnum.next()) != null) {
-                        String term = text.utf8ToString();
-                        int freq = (int) termsEnum.totalTermFreq();
-                        Float prevFreq = termFreqMap.get(term);
-                        if (prevFreq == null) {
-                            termFreqMap.put(term, (float) freq);
-                        } else {
-                            termFreqMap.put(term, (float) freq + prevFreq);
-                        }
-                    }
-                }
+                id = iterator.nextDoc();
+                
                 
                 
             } else {
@@ -199,7 +161,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
 
-            slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
+            slt = SenseQuery.SenseQueryForDocument(id, searcher.getIndexReader(),
                     params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
                     params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
 
