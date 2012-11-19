@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -48,6 +49,7 @@ import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
 
@@ -108,6 +110,8 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
         }
 
         SolrIndexSearcher searcher = req.getSearcher();
+        SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
+
 
         DocListAndSet sltDocs = null;
         HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
@@ -153,6 +157,11 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 // Create the TF of blah blah blah
                 DocIterator iterator = match.iterator();
                 id = iterator.nextDoc();
+                
+                    BooleanQuery bq=new BooleanQuery();
+                    Document doc=searcher.getIndexReader().document(id);
+                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+                    filters.add(bq);        
                 
                 
                 

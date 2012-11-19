@@ -16,6 +16,7 @@
  */
 package com.searchbox.solr;
 
+
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -48,6 +50,7 @@ import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
 
@@ -108,7 +111,9 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         }
 
         SolrIndexSearcher searcher = req.getSearcher();
-
+        SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
+        
+        
         DocListAndSet sltDocs = null;
         HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
         // Parse Required Params
@@ -164,20 +169,33 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                     int id = iterator.nextDoc();
                     
                     mlt.setMaxDocFreq(params.getInt(SenseParams.MLT_MAX_DOC_FREQ, MoreLikeThis.DEFAULT_MAX_DOC_FREQ));
-                    mlt.setMinTermFreq(params.getInt(MoreLikeThisParams.MIN_TERM_FREQ,MoreLikeThis.DEFAULT_MIN_TERM_FREQ));
+                    mlt.setMinTermFreq(params.getInt(MoreLikeThisParams.MIN_TERM_FREQ, MoreLikeThis.DEFAULT_MIN_TERM_FREQ));
                     mlt.setMinDocFreq(params.getInt(MoreLikeThisParams.MIN_DOC_FREQ, MoreLikeThis.DEFAULT_MIN_DOC_FREQ));
                     mlt.setMinWordLen(params.getInt(MoreLikeThisParams.MIN_WORD_LEN, MoreLikeThis.DEFAULT_MIN_WORD_LENGTH));
                     mlt.setMaxWordLen(params.getInt(MoreLikeThisParams.MAX_WORD_LEN, MoreLikeThis.DEFAULT_MAX_WORD_LENGTH));
                     mlt.setMaxQueryTerms(params.getInt(MoreLikeThisParams.MAX_QUERY_TERMS, MoreLikeThis.DEFAULT_MAX_QUERY_TERMS));
                     mlt.setMaxNumTokensParsed(params.getInt(MoreLikeThisParams.MAX_NUM_TOKENS_PARSED, MoreLikeThis.DEFAULT_MAX_NUM_TOKENS_PARSED));
-                    
-                    
+
+
                     Query mltq = mlt.like(id);
                     filters.add(mltq);
-
-                   System.out.println("XXXXXXXXXXXXXXXXXXXX\n\n Query for doc "+id+": " + mltq + "\n\nXXXXXXXXXXXXX");
+                    BooleanQuery bq=new BooleanQuery();
+                    Document doc=searcher.getIndexReader().document(id);
+                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+                    filters.add(bq);                     
+                    
+                    System.out.println("XXXXXXXXXXXXXXXXXXXX\n\n Query for doc " + id + ": " + mltq + "\n\nXXXXXXXXXXXXX");
 
                     System.out.println("Adding document ID of:\t " + id);
+
+                    System.out.println("mlt.getMaxDocFreq\t" + mlt.getMaxDocFreq());
+                    System.out.println("mlt.getMinTermFreq\t" + mlt.getMinTermFreq());
+                    System.out.println("mlt.getMinDocFreq\t" + mlt.getMinDocFreq());
+                    System.out.println("mlt.getMinWordLen\t" + mlt.getMinWordLen());
+                    System.out.println("mlt.getMaxWordLen\t" + mlt.getMaxWordLen());
+                    System.out.println("mlt.getMaxQueryTerms\t" + mlt.getMaxQueryTerms());
+                    System.out.println("mlt.getMaxNumTokensParsed\t" + mlt.getMaxNumTokensParsed());
+
 
                     TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).iterator(null);
                     BytesRef text;
@@ -192,8 +210,8 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                         }
                     }
                 }
-                
-                
+
+
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
@@ -203,12 +221,12 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                     params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
                     params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
 
-
+             
             //Execute the SLT query
-            //DocSet filtered = searcher.getDocSet(filters);
-            //System.out.println("Number of documents to search:\t" + filtered.size());
-            //sltDocs = searcher.getDocListAndSet(slt, filtered, Sort.RELEVANCE, start, rows, flags);
-            sltDocs = searcher.getDocListAndSet(slt, filters, Sort.RELEVANCE, start, rows, flags);
+            DocSet filtered = searcher.getDocSet(filters);
+            System.out.println("Number of documents to search:\t" + filtered.size());
+            sltDocs = searcher.getDocListAndSet(slt, filtered, Sort.RELEVANCE, start, rows, flags);
+            //sltDocs = searcher.getDocListAndSet(slt, filters, Sort.RELEVANCE, start, rows, flags);
 
         } finally {
             if (reader != null) {
