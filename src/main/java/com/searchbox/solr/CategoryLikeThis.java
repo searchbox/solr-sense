@@ -16,6 +16,8 @@
  */
 package com.searchbox.solr;
 
+import com.google.common.base.Functions;
+import com.google.common.collect.Ordering;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.CategoryQuery;
 import com.searchbox.math.RealTermFreqVector;
@@ -133,25 +135,31 @@ public class CategoryLikeThis extends RequestHandlerBase {
             if (reader != null) {
                 throw new RuntimeException("SLT based on a reader is not yet implemented");
             } else if (q != null) {
-                
-                System.out.println("Query for category:\t"+query);
-                DocList match = searcher.getDocList(query, null, null, 0, 10, flags); // get first 10
 
+                System.out.println("Query for category:\t" + query);
+                DocList match = searcher.getDocList(query, null, null, 0, 10, flags); // get first 10
+                if (match.size() == 0) { // no docs to make prototype!
+                    System.out.println("No documents found for prototype!");
+                    rsp.add("response", new DocListAndSet());
+                    return;
+                }
+
+
+                HashMap<String, Float> overallFreqMap = new HashMap<String, Float>();
                 // Create the TF of blah blah blah
                 DocIterator iterator = match.iterator();
-            while (iterator.hasNext()) {
+                while (iterator.hasNext()) {
                     // do a MoreLikeThis query for each document in results
                     int id = iterator.nextDoc();
-                    System.out.println("Working on doc:\t"+id);
-                    
+                    System.out.println("Working on doc:\t" + id);
+
                     HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
                     TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, senseField).iterator(null);
                     BytesRef text;
                     while ((text = termsEnum.next()) != null) {
                         String term = text.utf8ToString();
-                        System.out.println("\tAdding Term:\t"+term);
-                        TermQuery tq = new TermQuery(new Term(senseField, term));
-                        catfilter.add(tq, BooleanClause.Occur.SHOULD);
+                        System.out.println("\tAdding Term:\t" + term);
+
                         int freq = (int) termsEnum.totalTermFreq();
                         Float prevFreq = termFreqMap.get(term);
                         if (prevFreq == null) {
@@ -159,23 +167,40 @@ public class CategoryLikeThis extends RequestHandlerBase {
                         } else {
                             termFreqMap.put(term, (float) freq + prevFreq);
                         }
+
+                        prevFreq = overallFreqMap.get(term);
+                        if (prevFreq == null) {
+                            overallFreqMap.put(term, (float) freq);
+                        } else {
+                            overallFreqMap.put(term, (float) freq + prevFreq);
+                        }
+
+
                     }
                     prototypetfs.add(new RealTermFreqVector(termFreqMap));
                 }
+
+                List<String> sortedKeys = Ordering.natural().onResultOf(Functions.forMap(overallFreqMap)).immutableSortedCopy(overallFreqMap.keySet());
+                int keyiter = Math.min(sortedKeys.size() - 1, BooleanQuery.getMaxClauseCount() - 1);
+                System.out.println("I have this many terms:\t" + sortedKeys.size());
+                System.out.println("And i'm going to use this many:\t" + keyiter);
+                for (; keyiter >= 0; keyiter--) {
+                    TermQuery tq = new TermQuery(new Term(senseField, sortedKeys.get(keyiter)));
+                    catfilter.add(tq, BooleanClause.Occur.SHOULD);
+                }
+                
+
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "CategoryLikeThis requires either a query (?q=) or text to find similar documents.");
             }
 
-            
-            System.out.println("document filter is: \t"+catfilter);
+            System.out.println(
+                    "document filter is: \t" + catfilter);
             CategorizationBase model = new CategorizationBase(prototypetfs);
-
             CategoryQuery clt = CategoryQuery.CategoryQueryForDocument(catfilter, model, searcher.getIndexReader(), senseField);
             DocSet filtered = searcher.getDocSet(filters);
             cltDocs = searcher.getDocListAndSet(clt, filtered, Sort.RELEVANCE, start, rows, flags);
-
-
         } finally {
             if (reader != null) {
                 reader.close();
