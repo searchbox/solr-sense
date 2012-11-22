@@ -19,7 +19,11 @@ public class VectorUtils {
         for (int zz = 0; zz < vector.length; zz++) {
             norm += vector[zz] * vector[zz];
         }
-        return (float)Math.sqrt(norm);
+        if (norm == 0.0) {
+            return Float.MAX_VALUE;
+        } else {
+            return (float) Math.sqrt(norm);
+        }
     }
     
     public static float calculateNorm(final int[] v) {

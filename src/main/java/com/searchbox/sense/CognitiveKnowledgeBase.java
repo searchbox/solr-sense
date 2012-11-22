@@ -31,6 +31,7 @@ public class CognitiveKnowledgeBase {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CognitiveKnowledgeBase.class);
 
+    
    public enum Type {
         SPARSE,
         FULL
@@ -93,14 +94,27 @@ public class CognitiveKnowledgeBase {
                 continue;
             }
             final int[] termCols = col.get(term);
-            final float termFrequencies = freqs[zz];
+            final float termFrequency = freqs[zz];
             for (int i = 0; i < termCols.length; i++) {
-                vector[termCols[i]] += termFrequencies * termValues[i];
+                vector[termCols[i]] += termFrequency * termValues[i];
             }
         }
         return new DoubleFullVector(vector);
     }
-    
+
+    public DoubleFullVector getFullCkbVector(String term, float termFrequencies) {
+        float[] vector = new float[this.getColumnDimension()];
+        final float[] termValues = val.get(term);
+        if (termValues == null) {
+            return new DoubleFullVector(vector);
+        }
+        final int[] termCols = col.get(term);
+        for (int i = 0; i < termCols.length; i++) {
+            vector[termCols[i]] += termFrequencies * termValues[i];
+        }
+        return new DoubleFullVector(vector);
+    }
+
     public RealTermFreqVector getTfIdfVector(RealTermFreqVector tfc) {
         RealTermFreqVector out = new RealTermFreqVector(tfc.getSize());
         int maxSize = tfc.getSize();

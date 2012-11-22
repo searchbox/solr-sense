@@ -19,6 +19,7 @@ package com.searchbox.solr;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
+import com.searchbox.sense.QueryReduction;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -153,26 +154,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 // Create the TF of blah blah blah
                 DocIterator iterator = match.iterator();
                 if (iterator.hasNext()) {
-                    // do a MoreLikeThis query for each document in results
-
-
-                    // need to insert a MLT query here.
-                    MoreLikeThis mlt = new MoreLikeThis(searcher.getIndexReader());
-                    String[] mltfl = new String[]{params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)};
-                    mlt.setFieldNames(mltfl);
-
                     int id = iterator.nextDoc();
-                    
-                    mlt.setMaxDocFreq(Integer.parseInt(params.get(SenseParams.MLT_MAXDOCFREQ,SenseParams.MLT_MAXDOCFREQ_DEFAULT)));
-                    mlt.setMinTermFreq(Integer.parseInt(params.get(SenseParams.MLT_MINTERMFREQ,SenseParams.MLT_MINTERMFREQ_DEFAULT)));
-                    mlt.setMaxQueryTerms(Integer.parseInt(params.get(SenseParams.MLT_MAXQUERYTERMS,SenseParams.MLT_MAXQUERYTERMS_DEFAULT)));
-                    Query mltq = mlt.like(id);
-                    filters.add(mltq);
-
-                   System.out.println("XXXXXXXXXXXXXXXXXXXX\n\n Query for doc "+id+": " + mltq + "\n\nXXXXXXXXXXXXX");
-
-                    System.out.println("Adding document ID of:\t " + id);
-
                     TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).iterator(null);
                     BytesRef text;
                     while ((text = termsEnum.next()) != null) {
@@ -185,20 +167,30 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                             termFreqMap.put(term, (float) freq + prevFreq);
                         }
                     }
+                }else
+                {
+                    throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+                        "SenseLikeThis no document found matching request.");
                 }
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
 
+            String CKBid="1"; //TODO need to support different CKBs here or below?
+            QueryReduction qr= new QueryReduction(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
+            
+            
+            
+            Query filterQR=qr.getFiltersForQueryRedux();
+            DocSet filtered = searcher.getDocSet(filterQR);
+            System.out.println("Number of documents to search:\t" + filtered.size());
+            
             slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
                     params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
                     params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-
-
-            //Execute the SLT query
-            DocSet filtered = searcher.getDocSet(filters);
-            System.out.println("Number of documents to search:\t" + filtered.size());
+            System.out.println("Running search");
+            
             sltDocs = searcher.getDocListAndSet(slt, filtered, Sort.RELEVANCE, start, rows, flags);
 
         } finally {
@@ -212,23 +204,6 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         }
         rsp.add("response", sltDocs.docList);
 
-
-//    if( interesting != null ) {
-//      if( termStyle == TermStyle.DETAILS ) {
-//        NamedList<Float> it = new NamedList<Float>();
-//        for( MoreLikeThisHandler.InterestingTerm t : interesting ) {
-//          it.add( t.term.toString(), t.boost );
-//        }
-//        rsp.add( "interestingTerms", it );
-//      }
-//      else {
-//        List<String> it = new ArrayList<String>( interesting.size() );
-//        for( MoreLikeThisHandler.InterestingTerm t : interesting ) {
-//          it.add( t.term.text());
-//        }
-//        rsp.add( "interestingTerms", it );
-//      }
-//    }
 
         // maybe facet the results
         if (params.getBool(FacetParams.FACET, false)) {

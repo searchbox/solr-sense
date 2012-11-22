@@ -28,58 +28,57 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SenseQuery extends CustomScoreQuery {
-    
-    private static Query generateLuceneQuery(final String[] terms, final String senseField, final List<Query> filters){
-        
+
+    private static Query generateLuceneQuery(final String[] terms, final String senseField, final List<Query> filters) {
+
         BooleanQuery topLevelQuery = new BooleanQuery();
-        if(terms != null){
-            for(String term:terms){
+        if (terms != null) {
+            for (String term : terms) {
                 topLevelQuery.add(new BooleanClause(new TermQuery(new Term(senseField, term)), BooleanClause.Occur.SHOULD));
             }
         }
-        
-        if(filters != null){
-            for(Query filter:filters){
+
+        if (filters != null) {
+            for (Query filter : filters) {
                 topLevelQuery.add(new BooleanClause(filter, BooleanClause.Occur.MUST));
             }
         }
-        
+
         return topLevelQuery;
     }
 
     public static SenseQuery SenseQueryForDocument(RealTermFreqVector rtfv, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
         return new SenseQuery(rtfv, senseField,
-                generateLuceneQuery(rtfv.getTerms(),senseField, filters),
+                generateLuceneQuery(rtfv.getTerms(), senseField, filters),
                 senseWeight);
-        
+
     }
-    
-    
+
     public static SenseQuery SenseQueryForDocument(final int id, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
 
         final Fields vectors;
         final Terms vector;
         try {
-        vectors = ir.getTermVectors(id);
-        if (vectors != null) {
-            vector = vectors.terms(senseField);
-        } else {
-            vector = null;
-        }
+            vectors = ir.getTermVectors(id);
+            if (vectors != null) {
+                vector = vectors.terms(senseField);
+            } else {
+                vector = null;
+            }
 
-        // field does not store term vector info
-        if (vector == null) {
-            throw new RuntimeException("No termVectorFrequency available for field: " + senseField);
-        }
+            // field does not store term vector info
+            if (vector == null) {
+                throw new RuntimeException("No termVectorFrequency available for field: " + senseField);
+            }
 
-        RealTermFreqVector rtfv = SenseScoreProvider.getTermFreqmapfromTermsContainer(vector);
-        
-       
-        return new SenseQuery(rtfv, senseField,
-                generateLuceneQuery(rtfv.getTerms(),senseField, filters),
-                senseWeight);
+            RealTermFreqVector rtfv = SenseScoreProvider.getTermFreqmapfromTermsContainer(vector);
+
+
+            return new SenseQuery(rtfv, senseField,
+                    generateLuceneQuery(rtfv.getTerms(), senseField, filters),
+                    senseWeight);
         } catch (IOException ex) {
-            throw new RuntimeException("Could not generate SenseQuery for document[" + id+"]. Exception: " + ex.getMessage());
+            throw new RuntimeException("Could not generate SenseQuery for document[" + id + "]. Exception: " + ex.getMessage());
         }
     }
 
@@ -109,8 +108,8 @@ public class SenseQuery extends CustomScoreQuery {
             java.util.logging.Logger.getLogger(SenseQuery.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
-        return new SenseQuery(new RealTermFreqVector(termFreqMap), senseField, 
-                generateLuceneQuery(termFreqMap.keySet().toArray(new String[0]),senseField, filters),
+        return new SenseQuery(new RealTermFreqVector(termFreqMap), senseField,
+                generateLuceneQuery(termFreqMap.keySet().toArray(new String[0]), senseField, filters),
                 senseWeight);
     }
     public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
