@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
@@ -49,6 +50,7 @@ import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
 
@@ -109,6 +111,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         }
 
         SolrIndexSearcher searcher = req.getSearcher();
+        SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
 
         DocListAndSet sltDocs = null;
         HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
@@ -155,6 +158,15 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 DocIterator iterator = match.iterator();
                 if (iterator.hasNext()) {
                     int id = iterator.nextDoc();
+                    
+                    BooleanQuery bq=new BooleanQuery();
+                    Document doc=searcher.getIndexReader().document(id);
+                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+                    filters.add(bq);        
+                    
+                    
+                    
+                    
                     TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).iterator(null);
                     BytesRef text;
                     while ((text = termsEnum.next()) != null) {
@@ -183,7 +195,8 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             
             
             Query filterQR=qr.getFiltersForQueryRedux();
-            DocSet filtered = searcher.getDocSet(filterQR);
+            filters.add(filterQR);
+            DocSet filtered = searcher.getDocSet(filters);
             System.out.println("Number of documents to search:\t" + filtered.size());
             
             slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
@@ -191,7 +204,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                     params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
             System.out.println("Running search");
             
-            sltDocs = searcher.getDocListAndSet(slt, filtered, Sort.RELEVANCE, start, rows, flags);
+            sltDocs = searcher.getDocListAndSet(slt, filters, Sort.RELEVANCE, start, rows, flags);
 
         } finally {
             if (reader != null) {

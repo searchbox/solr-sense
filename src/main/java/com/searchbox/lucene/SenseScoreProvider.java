@@ -37,7 +37,9 @@ public class SenseScoreProvider extends CustomScoreProvider {
     private final RealTermFreqVector qtfidf;
     private final double senseWeight;
     private final String senseField;
-
+    //private HashMap <Integer, Float> scorecache= new HashMap();
+    
+    
     SenseScoreProvider(AtomicReaderContext context, String senseField,
             CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, double ckbWeight) {
         super(context);
@@ -88,6 +90,12 @@ public class SenseScoreProvider extends CustomScoreProvider {
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         
+        float finalscore;
+        /*Float finalscore=scorecache.get(doc);
+        if(finalscore!=null){
+              return finalscore;
+        }*/
+        
         Terms terms = context.reader().getTermVector(doc, this.senseField);
         RealTermFreqVector rtfv= getTermFreqmapfromTermsContainer(terms);
 
@@ -117,9 +125,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
                 LOGGER.debug("idfscore: " + idfscore);
         }
         
-        float finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
+         finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
          if(LOGGER.isDebugEnabled())
             LOGGER.debug("Final score "+ finalscore);
+        //scorecache.put(doc, finalscore);
         return finalscore; 
     }
 
