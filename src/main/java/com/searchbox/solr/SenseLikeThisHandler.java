@@ -191,20 +191,26 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
 
             String CKBid="1"; //TODO need to support different CKBs here or below?
             QueryReduction qr= new QueryReduction(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
+            qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
+            qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
             
             
             
             Query filterQR=qr.getFiltersForQueryRedux();
             filters.add(filterQR);
-            DocSet filtered = searcher.getDocSet(filters);
-            System.out.println("Number of documents to search:\t" + filtered.size());
+            
+            //DocSet filtered = searcher.getDocSet(filters);
+            DocListAndSet filtered = searcher.getDocListAndSet(filterQR, new ArrayList<Query>(), Sort.RELEVANCE, 0, 10000);
+            DocList subFiltered=filtered.docList.subset(0, params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
+            
+            System.out.println("Number of documents to search:\t" + subFiltered.size());
             
             slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
                     params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
                     params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
             System.out.println("Running search");
             
-            sltDocs = searcher.getDocListAndSet(slt, filters, Sort.RELEVANCE, start, rows, flags);
+            sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
 
         } finally {
             if (reader != null) {

@@ -21,7 +21,27 @@ public class QueryReduction {
     private SolrIndexSearcher searcher;
     private String senseField;
     private int threshold = 500;
+    private int numtermstouse=-1;
+    
+    
 
+    public int getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(int threshold) {
+        this.threshold = threshold;
+    }
+
+    public int getNumtermstouse() {
+        return numtermstouse;
+    }
+
+    public void setNumtermstouse(int numtermstouse) {
+        this.numtermstouse = numtermstouse;
+    }
+
+    
     public QueryReduction(HashMap<String, Float> termFreqMap, String CKBid, SolrIndexSearcher searcher, String senseField) {
         this.ckb = ((CognitiveKnowledgeBase) SenseQParserPlugin.ckbByID.get(CKBid));
         this.termFreqMap = termFreqMap;
@@ -32,7 +52,9 @@ public class QueryReduction {
     public BooleanQuery getFiltersForQueryRedux() throws IOException {
         BooleanQuery bqoutter = new BooleanQuery();
         int numterms = this.termFreqMap.size();
-        int numtermstouse = (int) Math.round(numterms * 0.2D);
+        if(numtermstouse==-1) {
+            numtermstouse = (int) Math.round(numterms * 0.2D);
+        }
         RealTermFreqVector rtv = new RealTermFreqVector(this.termFreqMap);
         RealTermFreqVector rtvn = rtv.getUnitVector();
 
