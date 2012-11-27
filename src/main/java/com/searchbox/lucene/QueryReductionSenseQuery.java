@@ -1,29 +1,35 @@
-package com.searchbox.sense;
+package com.searchbox.lucene;
 
 import com.searchbox.math.RealTermFreqVector;
+import com.searchbox.sense.CognitiveKnowledgeBase;
 import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
+import org.apache.solr.search.DocList;
+import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.SolrIndexSearcher;
 
-public class QueryReduction {
+public class QueryReductionSenseQuery {
 
     private final CognitiveKnowledgeBase ckb;
-    private HashMap<String, Float> termFreqMap;
+    private RealTermFreqVector rtv;
     private SolrIndexSearcher searcher;
     private String senseField;
     private int threshold = 500;
     private int numtermstouse=-1;
-    
-    
+    private int maxDocSubSet=5000;
+    private BooleanQuery filterQR;
+
+    public BooleanQuery getFilterQR() {
+        return filterQR;
+    }
 
     public int getThreshold() {
         return threshold;
@@ -41,21 +47,29 @@ public class QueryReduction {
         this.numtermstouse = numtermstouse;
     }
 
+    public void setMaxDocSubSet(int maxDocSubSet) {
+        this.maxDocSubSet=maxDocSubSet;
+    }
     
-    public QueryReduction(HashMap<String, Float> termFreqMap, String CKBid, SolrIndexSearcher searcher, String senseField) {
+    
+    public int getMaxDocSubSet() {
+        return maxDocSubSet;
+    }
+
+    
+    public QueryReductionSenseQuery(RealTermFreqVector rtv, String CKBid, SolrIndexSearcher searcher, String senseField) {
         this.ckb = ((CognitiveKnowledgeBase) SenseQParserPlugin.ckbByID.get(CKBid));
-        this.termFreqMap = termFreqMap;
+        this.rtv = rtv;
         this.searcher = searcher;
         this.senseField = senseField;
     }
 
     public BooleanQuery getFiltersForQueryRedux() throws IOException {
         BooleanQuery bqoutter = new BooleanQuery();
-        int numterms = this.termFreqMap.size();
+        int numterms = this.rtv.getSize();
         if(numtermstouse==-1) {
             numtermstouse = (int) Math.round(numterms * 0.2D);
         }
-        RealTermFreqVector rtv = new RealTermFreqVector(this.termFreqMap);
         RealTermFreqVector rtvn = rtv.getUnitVector();
 
         Holder[] hq = new Holder[numterms];
@@ -95,8 +109,14 @@ public class QueryReduction {
                 }
             }
         }
-
+        this.filterQR=bqoutter;
         return bqoutter;
+    }
+    
+    public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {
+        Query filterQR=getFiltersForQueryRedux();
+        DocListAndSet filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
+        return filtered.docList.subset(0,maxDocSubSet);
     }
 
     private class Holder implements Comparable<Holder> {

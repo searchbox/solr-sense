@@ -24,10 +24,18 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.solr.schema.IndexSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class SenseQuery extends CustomScoreQuery {
+        public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
+    private String senseField;
+    private final RealTermFreqVector rtfv;
+    private final CognitiveKnowledgeBase ckb;
+    private final RealTermFreqVector qtfidf;
+    private final DoubleFullVector qvector;
+    private double senseWeight = 1.0;
 
     private static Query generateLuceneQuery(final String[] terms, final String senseField, final List<Query> filters) {
 
@@ -54,7 +62,7 @@ public class SenseQuery extends CustomScoreQuery {
 
     }
 
-    public static SenseQuery SenseQueryForDocument(final int id, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
+    /*public static SenseQuery SenseQueryForDocument(final int id, final IndexReader ir, final String senseField, double senseWeight, final List<Query> filters) {
 
         final Fields vectors;
         final Terms vector;
@@ -80,10 +88,16 @@ public class SenseQuery extends CustomScoreQuery {
         } catch (IOException ex) {
             throw new RuntimeException("Could not generate SenseQuery for document[" + id + "]. Exception: " + ex.getMessage());
         }
-    }
+    }*/
 
-    public static SenseQuery SenseQueryForText(final String queryText, String senseField, Analyzer analyzer, double senseWeight, final List<Query> filters) {
+    public static Analyzer getAnalyzerForField(final IndexSchema indexSchema, final String fieldName) {
+        //TODO somehow check that field exists.
+        return indexSchema.getField(fieldName).getType().getAnalyzer();
+    }
+    
+    public static Map<String, Float> RealTermFreqVectorFromText(final String queryText, Analyzer analyzer) {
         Map<String, Float> termFreqMap = new HashMap<String, Float>();
+
         try {
             TokenStream ts = analyzer.tokenStream("", new StringReader(queryText));
             int tokenCount = 0;
@@ -108,17 +122,17 @@ public class SenseQuery extends CustomScoreQuery {
             java.util.logging.Logger.getLogger(SenseQuery.class
                     .getName()).log(Level.SEVERE, null, ex);
         }
+
+        return termFreqMap;
+    }
+    
+    public static SenseQuery SenseQueryForText(final String queryText, String senseField, Analyzer analyzer, double senseWeight, final List<Query> filters) {
+        Map<String, Float> termFreqMap = RealTermFreqVectorFromText(queryText,analyzer);
         return new SenseQuery(new RealTermFreqVector(termFreqMap), senseField,
                 generateLuceneQuery(termFreqMap.keySet().toArray(new String[0]), senseField, filters),
                 senseWeight);
     }
-    public static final Logger LOGGER = LoggerFactory.getLogger(SenseQuery.class);
-    private String senseField;
-    private final RealTermFreqVector rtfv;
-    private final CognitiveKnowledgeBase ckb;
-    private final RealTermFreqVector qtfidf;
-    private final DoubleFullVector qvector;
-    private double senseWeight = 1.0;
+
 
     public SenseQuery(final RealTermFreqVector rtfv, String senseField, final Query luceneQuery, double senseWeight) {
         super(luceneQuery);

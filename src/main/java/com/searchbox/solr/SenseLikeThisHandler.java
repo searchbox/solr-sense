@@ -19,7 +19,7 @@ package com.searchbox.solr;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
-import com.searchbox.sense.QueryReduction;
+import com.searchbox.lucene.QueryReductionSenseQuery;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -190,7 +190,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             }
 
             String CKBid="1"; //TODO need to support different CKBs here or below?
-            QueryReduction qr= new QueryReduction(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
+            QueryReductionSenseQuery qr= new QueryReductionSenseQuery(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
             qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
             qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
             

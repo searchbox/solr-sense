@@ -7,7 +7,7 @@ package com.searchbox.solr;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
-import com.searchbox.sense.QueryReduction;
+import com.searchbox.lucene.QueryReductionSenseQuery;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -41,6 +41,7 @@ import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.request.SolrRequestHandler;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.IndexSchema;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
@@ -66,7 +67,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
-         SolrParams params = req.getParams();
+        SolrParams params = req.getParams();
 
         // Set field flags
         ReturnFields returnFields = new ReturnFields(req);
@@ -76,17 +77,10 @@ public class SenseQueryHandler extends RequestHandlerBase {
             flags |= SolrIndexSearcher.GET_SCORES;
         }
 
-        String defType = params.get(QueryParsing.DEFTYPE, QParserPlugin.DEFAULT_QTYPE);
         String q = params.get(CommonParams.Q);
-        SortSpec sortSpec = null;
-        List<Query> filters = filters = new ArrayList<Query>();
+        List<Query> filters = new ArrayList<Query>();
 
         try {
-            if (q != null) {
-                QParser parser = QParser.getParser(q, defType, req);
-                sortSpec = parser.getSort(true);
-            }
-
             String[] fqs = req.getParams().getParams(CommonParams.FQ);
             if (fqs != null && fqs.length != 0) {
                 for (String fq : fqs) {
@@ -100,80 +94,43 @@ public class SenseQueryHandler extends RequestHandlerBase {
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
+
+
+
+        int start = params.getInt(CommonParams.START, 0);
+        int rows = params.getInt(CommonParams.ROWS, 10);
+
+
+        if (q == null) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+                    "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
+        }
+
+
+
         SolrIndexSearcher searcher = req.getSearcher();
 
-        DocListAndSet sltDocs = null;
-        HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
-        // Parse Required Params
-        // This will either have a single Reader or valid query
-        Reader reader = null;
-        try {
-            if (q == null || q.trim().length() < 1) {
-                Iterable<ContentStream> streams = req.getContentStreams();
-                if (streams != null) {
-                    Iterator<ContentStream> iter = streams.iterator();
-                    if (iter.hasNext()) {
-                        reader = iter.next().getReader();
-                    }
-                    if (iter.hasNext()) {
-                        throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                                "SenseLikeThis does not support multiple ContentStreams");
-                    }
-                }
-            }
+        String CKBid = "1"; //TODO need to support different CKBs here or below?
+        String senseField= params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+        RealTermFreqVector rtv = new RealTermFreqVector(SenseQuery.RealTermFreqVectorFromText(q, SenseQuery.getAnalyzerForField(req.getSchema(), senseField)));
+        
+        QueryReductionSenseQuery qr = new QueryReductionSenseQuery(rtv, CKBid, searcher, senseField);
+        qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
+        qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
+        qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
 
-            int start = params.getInt(CommonParams.START, 0);
-            int rows = params.getInt(CommonParams.ROWS, 10);
+        DocList subFiltered = qr.getSubSetToSearchIn(filters);
+        System.out.println("Number of documents to search:\t" + subFiltered.size());
+        SenseQuery slt = SenseQuery.SenseQueryForDocument(rtv, searcher.getIndexReader(), senseField, params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+        DocListAndSet sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
 
-            // Find documents SenseLikeThis - either with a reader or a query
-            // --------------------------------------------------------------------------------
-            SenseQuery slt = null;
-            if (reader != null) {
-                throw new RuntimeException("SLT based on a reader is not yet implemented");
-            } else if (q != null) {
-                // Matching options
-
-            Analyzer analyser = req.getSchema().getField(params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).getType().getAnalyzer();
-                
-            } else {
-                throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
-            }
-
-            String CKBid="1"; //TODO need to support different CKBs here or below?
-            QueryReduction qr= new QueryReduction(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
-            qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
-            qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
-            
-            
-            Query filterQR=qr.getFiltersForQueryRedux();
-            filters.add(filterQR);
-            
-            //DocSet filtered = searcher.getDocSet(filters);
-            DocListAndSet filtered = searcher.getDocListAndSet(filterQR, new ArrayList<Query>(), Sort.RELEVANCE, 0, 10000);
-            DocList subFiltered=filtered.docList.subset(0, params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
-            
-            System.out.println("Number of documents to search:\t" + subFiltered.size());
-            
-            slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
-                    params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
-                    params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-            System.out.println("Running search");
-            
-            sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
-        }
 
         if (sltDocs == null) {
             sltDocs = new DocListAndSet(); // avoid NPE
         }
         rsp.add("response", sltDocs.docList);
 
-
+        // --------- OLD CODE BELOW
         // maybe facet the results
         if (params.getBool(FacetParams.FACET, false)) {
             if (sltDocs.docSet == null) {
@@ -204,7 +161,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
             dbgResults = true;
         }
         // Copied from StandardRequestHandler... perhaps it should be added to doStandardDebug?
-        if (dbg == true) {
+        /*if (dbg == true) {     // tricky tricky, no longer have a "query" value per say
             try {
 
                 NamedList<Object> dbgInfo = SolrPluginUtils.doStandardDebug(req, q, query, sltDocs.docList, dbgQuery, dbgResults);
@@ -223,7 +180,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
                 SolrException.log(SolrCore.log, "Exception during debug", e);
                 rsp.add("exception_during_debug", SolrException.toStr(e));
             }
-        }
+        }*/
     }
 
     @Override
@@ -235,17 +192,14 @@ public class SenseQueryHandler extends RequestHandlerBase {
     public String getVersion() {
         return "1.0";
     }
-    
+
     @Override
     public String getDescription() {
         return "Searchbox handler based on latent semantics";
     }
 
-
     @Override
     public String getSource() {
         return "";
     }
-
-
 }

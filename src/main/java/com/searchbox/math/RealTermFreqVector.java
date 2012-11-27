@@ -4,7 +4,10 @@
  */
 package com.searchbox.math;
 
+import com.searchbox.commons.params.SenseParams;
 import java.util.Map;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.solr.schema.IndexSchema;
 
 /**
  *
