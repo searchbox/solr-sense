@@ -152,34 +152,16 @@ public class CategoryLikeThis extends RequestHandlerBase {
                     // do a MoreLikeThis query for each document in results
                     int id = iterator.nextDoc();
                     System.out.println("Working on doc:\t" + id);
-
-                    HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
-                    TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, senseField).iterator(null);
-                    BytesRef text;
-                    while ((text = termsEnum.next()) != null) {
-                        String term = text.utf8ToString();
-                        System.out.println("\tAdding Term:\t" + term);
-
-                        int freq = (int) termsEnum.totalTermFreq();
-                        Float prevFreq = termFreqMap.get(term);
-                        if (prevFreq == null) {
-                            termFreqMap.put(term, (float) freq);
-                        } else {
-                            termFreqMap.put(term, (float) freq + prevFreq);
-                        }
-
-                        prevFreq = overallFreqMap.get(term);
-                        if (prevFreq == null) {
-                            overallFreqMap.put(term, (float) freq);
-                        } else {
-                            overallFreqMap.put(term, (float) freq + prevFreq);
-                        }
-
-
+                    RealTermFreqVector rtv = new RealTermFreqVector(id,searcher.getIndexReader(),senseField);
+                    for (int zz=0;zz<rtv.getSize();zz++){
+                        Float prev= overallFreqMap.get(rtv.getTerms()[zz]);
+                        if(prev==null)
+                            prev=0f;
+                        overallFreqMap.put(rtv.getTerms()[zz], rtv.getFreqs()[zz]+prev);
                     }
-                    prototypetfs.add(new RealTermFreqVector(termFreqMap));
+                    prototypetfs.add(rtv);
                 }
-
+                
                 List<String> sortedKeys = Ordering.natural().onResultOf(Functions.forMap(overallFreqMap)).immutableSortedCopy(overallFreqMap.keySet());
                 int keyiter = Math.min(sortedKeys.size() - 1, BooleanQuery.getMaxClauseCount() - 1);
                 System.out.println("I have this many terms:\t" + sortedKeys.size());

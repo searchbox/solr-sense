@@ -18,6 +18,7 @@ package com.searchbox.solr;
 
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
+import com.searchbox.math.RealTermFreqVector;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -67,7 +68,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         SolrParams params = req.getParams();
-        int id;
+        int docID;
         // Set field flags
         ReturnFields returnFields = new ReturnFields(req);
         rsp.setReturnFields(returnFields);
@@ -107,7 +108,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
 
 
         DocListAndSet sltDocs = null;
-        HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
+        
         // Parse Required Params
         // This will either have a single Reader or valid query
         Reader reader = null;
@@ -149,10 +150,10 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
 
                 // Create the TF of blah blah blah
                 DocIterator iterator = match.iterator();
-                id = iterator.nextDoc();
+                docID = iterator.nextDoc();
                 
                     BooleanQuery bq=new BooleanQuery();
-                    Document doc=searcher.getIndexReader().document(id);
+                    Document doc=searcher.getIndexReader().document(docID);
                     bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
                     filters.add(bq);        
                 
@@ -162,10 +163,10 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
-
-            slt = SenseQuery.SenseQueryForDocument(id, searcher.getIndexReader(),
-                    params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
-                    params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+            
+            String senseField=params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+            slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField),senseField,
+                    params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);
 
 
             //Execute the SLT query

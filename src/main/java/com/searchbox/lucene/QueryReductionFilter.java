@@ -16,7 +16,7 @@ import org.apache.solr.search.DocList;
 import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.SolrIndexSearcher;
 
-public class QueryReductionSenseQuery {
+public class QueryReductionFilter {
 
     private final CognitiveKnowledgeBase ckb;
     private RealTermFreqVector rtv;
@@ -57,7 +57,7 @@ public class QueryReductionSenseQuery {
     }
 
     
-    public QueryReductionSenseQuery(RealTermFreqVector rtv, String CKBid, SolrIndexSearcher searcher, String senseField) {
+    public QueryReductionFilter(RealTermFreqVector rtv, String CKBid, SolrIndexSearcher searcher, String senseField) {
         this.ckb = ((CognitiveKnowledgeBase) SenseQParserPlugin.ckbByID.get(CKBid));
         this.rtv = rtv;
         this.searcher = searcher;

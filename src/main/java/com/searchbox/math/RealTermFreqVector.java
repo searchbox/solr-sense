@@ -4,10 +4,20 @@
  */
 package com.searchbox.math;
 
-import com.searchbox.commons.params.SenseParams;
+import com.searchbox.lucene.SenseQuery;
+import java.io.IOException;
+import java.io.StringReader;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.solr.schema.IndexSchema;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.util.BytesRef;
 
 /**
  *
@@ -20,13 +30,19 @@ public class RealTermFreqVector {
     int size;
     int nextpos;
 
-    
-    public int getSize(){
+    public void set(String term, float freq, int pos) {
+        terms[pos] = term;
+        freqs[pos] = freq;
+    }
+
+    public int getSize() {
         return this.size;
     }
-    public void setSize(int size){
-        this.size=size;
+
+    public void setSize(int size) {
+        this.size = size;
     }
+
     public String[] getTerms() {
         return terms;
     }
@@ -44,21 +60,21 @@ public class RealTermFreqVector {
     }
 
     public RealTermFreqVector(int size) {
-        terms= new String[size];
-        freqs= new float[size];
-        nextpos=0;
-        this.size=size;
+        terms = new String[size];
+        freqs = new float[size];
+        nextpos = 0;
+        this.size = size;
     }
-    
+
     public RealTermFreqVector(String[] terms, float[] freqs, int size) {
         this.terms = terms;
         this.freqs = freqs;
-        this.size=size;
+        this.size = size;
     }
-    
+
     public int getNextpos() {
         nextpos++;
-        return nextpos-1;
+        return nextpos - 1;
     }
 
     public float getDistance(final RealTermFreqVector other) {
@@ -123,23 +139,89 @@ public class RealTermFreqVector {
 
         return new RealTermFreqVector(terms, newfreqs, size);
     }
-    
-    
+
     public RealTermFreqVector(Map<String, Float> termFreqMap) {
         terms = termFreqMap.keySet().toArray(new String[0]);
         java.util.Arrays.sort(terms);
-        
+
         freqs = new float[terms.length];
         for (int zz = 0; zz < terms.length; zz++) {
             freqs[zz] = (float) termFreqMap.get(terms[zz]);
         }
         nextpos = terms.length;
-        size=terms.length;
+        size = terms.length;
+    }
+
+    public RealTermFreqVector(int docID, IndexReader reader, String senseField) throws IOException {
+        this(reader.getTermVector(docID, senseField));
+        /*        if (terms == null) {
+         throw new RuntimeException("No termVectorFrequency available for field: " + senseField);
+         }
+         */
+    }
+
+    public RealTermFreqVector(Terms terms) {
+        this(termFreqMapTermsTotermFreqMap(terms));
     }
     
-    public void set(String term, float freq, int pos) {
-        terms[pos]=term;
-        freqs[pos]=freq;
+    public RealTermFreqVector(final String queryText, Analyzer analyzer) {
+        this(quertTextToTermFreqmap(queryText, analyzer));
     }
+
+    private static Map<String, Float> termFreqMapTermsTotermFreqMap(Terms terms) {
+        Map<String, Float> termFreqMap = new HashMap<String, Float>();
+        try {
+            TermsEnum termsEnum = terms.iterator(null);
+            BytesRef text;
+            while ((text = termsEnum.next()) != null) {
+                String term = text.utf8ToString();
+                System.out.println("\tAdding Term:\t" + term);
+
+                int freq = (int) termsEnum.totalTermFreq();
+                Float prevFreq = termFreqMap.get(term);
+                if (prevFreq == null) {
+                    termFreqMap.put(term, (float) freq);
+                } else {
+                    termFreqMap.put(term, (float) freq + prevFreq);
+                }
+            }
+
+        } catch (IOException ex) {
+            Logger.getLogger(RealTermFreqVector.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return termFreqMap;
+    }
+
+    private static Map<String, Float> quertTextToTermFreqmap(final String queryText, Analyzer analyzer) {
+        Map<String, Float> termFreqMap = new HashMap<String, Float>();
+
+        try {
+            TokenStream ts = analyzer.tokenStream("", new StringReader(queryText));
+            int tokenCount = 0;
+            // for every token
+            CharTermAttribute termAtt = ts.addAttribute(CharTermAttribute.class);
+            ts.reset();
+
+            while (ts.incrementToken()) {
+                String word = termAtt.toString();
+                tokenCount++;
+                // increment frequency
+                Float cnt = termFreqMap.get(word);
+                if (cnt == null) {
+                    termFreqMap.put(word, new Float(1));
+                } else {
+                    termFreqMap.put(word, cnt + 1);
+                }
+            }
+
+            ts.end();
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(SenseQuery.class
+                    .getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return termFreqMap;
+    }
+
     
 }

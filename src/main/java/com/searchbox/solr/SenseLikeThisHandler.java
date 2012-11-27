@@ -19,7 +19,7 @@ package com.searchbox.solr;
 import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
-import com.searchbox.lucene.QueryReductionSenseQuery;
+import com.searchbox.lucene.QueryReductionFilter;
 import java.io.Reader;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -88,7 +88,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         String q = params.get(CommonParams.Q);
         Query query = null;
         SortSpec sortSpec = null;
-        List<Query> filters = filters = new ArrayList<Query>();;
+        List<Query> filters = filters = new ArrayList<Query>();
 
         try {
             if (q != null) {
@@ -114,109 +114,57 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
 
         DocListAndSet sltDocs = null;
-        HashMap<String, Float> termFreqMap = new HashMap<String, Float>();
+
         // Parse Required Params
         // This will either have a single Reader or valid query
-        Reader reader = null;
-        try {
-            if (q == null || q.trim().length() < 1) {
-                Iterable<ContentStream> streams = req.getContentStreams();
-                if (streams != null) {
-                    Iterator<ContentStream> iter = streams.iterator();
-                    if (iter.hasNext()) {
-                        reader = iter.next().getReader();
-                    }
-                    if (iter.hasNext()) {
-                        throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                                "SenseLikeThis does not support multiple ContentStreams");
-                    }
-                }
-            }
 
-            int start = params.getInt(CommonParams.START, 0);
-            int rows = params.getInt(CommonParams.ROWS, 10);
+        int start = params.getInt(CommonParams.START, 0);
+        int rows = params.getInt(CommonParams.ROWS, 10);
 
-            // Find documents SenseLikeThis - either with a reader or a query
-            // --------------------------------------------------------------------------------
-            SenseQuery slt = null;
-            if (reader != null) {
-                throw new RuntimeException("SLT based on a reader is not yet implemented");
-            } else if (q != null) {
-                // Matching options
-                boolean includeMatch = params.getBool(MoreLikeThisParams.MATCH_INCLUDE, true);
-                int matchOffset = params.getInt(MoreLikeThisParams.MATCH_OFFSET, 0);
-                // Find the base match
-
-
-                DocList match = searcher.getDocList(query, null, null, matchOffset, 1, flags); // only get the first one...
-                if (includeMatch) {
-                    rsp.add("match", match);
-                }
-
-
-                // Create the TF of blah blah blah
-                DocIterator iterator = match.iterator();
-                if (iterator.hasNext()) {
-                    int id = iterator.nextDoc();
-                    
-                    BooleanQuery bq=new BooleanQuery();
-                    Document doc=searcher.getIndexReader().document(id);
-                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
-                    filters.add(bq);        
-                    
-                    
-                    
-                    
-                    TermsEnum termsEnum = searcher.getAtomicReader().getTermVector(id, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD)).iterator(null);
-                    BytesRef text;
-                    while ((text = termsEnum.next()) != null) {
-                        String term = text.utf8ToString();
-                        int freq = (int) termsEnum.totalTermFreq();
-                        Float prevFreq = termFreqMap.get(term);
-                        if (prevFreq == null) {
-                            termFreqMap.put(term, (float) freq);
-                        } else {
-                            termFreqMap.put(term, (float) freq + prevFreq);
-                        }
-                    }
-                }else
-                {
-                    throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "SenseLikeThis no document found matching request.");
-                }
-            } else {
-                throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
-            }
-
-            String CKBid="1"; //TODO need to support different CKBs here or below?
-            QueryReductionSenseQuery qr= new QueryReductionSenseQuery(termFreqMap,CKBid,searcher, params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
-            qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
-            qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
-            
-            
-            
-            Query filterQR=qr.getFiltersForQueryRedux();
-            filters.add(filterQR);
-            
-            //DocSet filtered = searcher.getDocSet(filters);
-            DocListAndSet filtered = searcher.getDocListAndSet(filterQR, new ArrayList<Query>(), Sort.RELEVANCE, 0, 10000);
-            DocList subFiltered=filtered.docList.subset(0, params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
-            
-            System.out.println("Number of documents to search:\t" + subFiltered.size());
-            
-            slt = SenseQuery.SenseQueryForDocument(new RealTermFreqVector(termFreqMap), searcher.getIndexReader(),
-                    params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD),
-                    params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-            System.out.println("Running search");
-            
-            sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-
-        } finally {
-            if (reader != null) {
-                reader.close();
-            }
+        // Find documents SenseLikeThis - either with a reader or a query
+        // --------------------------------------------------------------------------------
+        SenseQuery slt = null;
+        if (q == null) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+                    "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
         }
+        // Matching options
+        boolean includeMatch = params.getBool(MoreLikeThisParams.MATCH_INCLUDE, true);
+        int matchOffset = params.getInt(MoreLikeThisParams.MATCH_OFFSET, 0);
+        // Find the base match
+
+
+        DocList match = searcher.getDocList(query, null, null, matchOffset, 1, flags); // only get the first one...
+        if (includeMatch) {
+            rsp.add("match", match);
+        }
+
+        DocIterator iterator = match.iterator();
+        if (!iterator.hasNext()) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
+                    "SenseLikeThis no document found matching request.");
+        }
+        int id = iterator.nextDoc();
+
+        BooleanQuery bq = new BooleanQuery();
+        Document doc = searcher.getIndexReader().document(id);
+        bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+        filters.add(bq);
+
+        String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+
+        String CKBid = "1"; //TODO need to support different CKBs here or below?
+        RealTermFreqVector rtv = new RealTermFreqVector(id, searcher.getIndexReader(), senseField);
+        QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
+        qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
+        qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
+        qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
+
+
+        DocList subFiltered = qr.getSubSetToSearchIn(filters);
+        System.out.println("Number of documents to search:\t" + subFiltered.size());
+        slt = new SenseQuery(rtv, senseField, params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+        sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
 
         if (sltDocs == null) {
             sltDocs = new DocListAndSet(); // avoid NPE
