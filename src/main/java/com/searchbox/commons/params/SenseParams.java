@@ -11,10 +11,10 @@ package com.searchbox.commons.params;
 public class SenseParams {
     
     public static String SENSE_WEIGHT = "sw";
-    public static float DEFAULT_SENSE_WEIGHT = 1.0f;
+    public static float DEFAULT_SENSE_WEIGHT = 0.8f;
 
     public static String SENSE_FIELD = "sf";
-    public static String DEFAULT_SENSE_FIELD = "article_abstract";
+    public static String DEFAULT_SENSE_FIELD = "article-abstract";
     
     public static String SENSE_QPARSER = "sense";
     

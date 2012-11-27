@@ -148,7 +148,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 }
 
 
-                // Create the TF of blah blah blah
+                // Get docID
                 DocIterator iterator = match.iterator();
                 docID = iterator.nextDoc();
                 
@@ -166,7 +166,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
             
             String senseField=params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
             slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField),senseField,
-                    params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);
+                    params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);
 
 
             //Execute the SLT query
@@ -185,24 +185,6 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
             sltDocs = new DocListAndSet(); // avoid NPE
         }
         rsp.add("response", sltDocs.docList);
-
-
-//    if( interesting != null ) {
-//      if( termStyle == TermStyle.DETAILS ) {
-//        NamedList<Float> it = new NamedList<Float>();
-//        for( MoreLikeThisHandler.InterestingTerm t : interesting ) {
-//          it.add( t.term.toString(), t.boost );
-//        }
-//        rsp.add( "interestingTerms", it );
-//      }
-//      else {
-//        List<String> it = new ArrayList<String>( interesting.size() );
-//        for( MoreLikeThisHandler.InterestingTerm t : interesting ) {
-//          it.add( t.term.text());
-//        }
-//        rsp.add( "interestingTerms", it );
-//      }
-//    }
 
         // maybe facet the results
         if (params.getBool(FacetParams.FACET, false)) {

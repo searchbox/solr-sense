@@ -24,6 +24,7 @@ public class CategoryQuery extends CustomScoreQuery {
     CategorizationBase model;
     IndexReader reader;
     String senseField;
+    
     public static CategoryQuery CategoryQueryForDocument(Query filter,CategorizationBase model, DirectoryReader indexReader,String senseField) {
         return new CategoryQuery(filter,model,indexReader,senseField);
     }

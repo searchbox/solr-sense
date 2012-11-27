@@ -140,6 +140,8 @@ public class RealTermFreqVector {
         return new RealTermFreqVector(terms, newfreqs, size);
     }
 
+    
+    //---- various constructors 
     public RealTermFreqVector(Map<String, Float> termFreqMap) {
         terms = termFreqMap.keySet().toArray(new String[0]);
         java.util.Arrays.sort(terms);
@@ -175,8 +177,7 @@ public class RealTermFreqVector {
             BytesRef text;
             while ((text = termsEnum.next()) != null) {
                 String term = text.utf8ToString();
-                System.out.println("\tAdding Term:\t" + term);
-
+                
                 int freq = (int) termsEnum.totalTermFreq();
                 Float prevFreq = termFreqMap.get(term);
                 if (prevFreq == null) {
@@ -189,6 +190,7 @@ public class RealTermFreqVector {
         } catch (IOException ex) {
             Logger.getLogger(RealTermFreqVector.class.getName()).log(Level.SEVERE, null, ex);
         }
+
         return termFreqMap;
     }
 
@@ -204,6 +206,7 @@ public class RealTermFreqVector {
 
             while (ts.incrementToken()) {
                 String word = termAtt.toString();
+                System.out.println("\tAdding Term:\t" + word);
                 tokenCount++;
                 // increment frequency
                 Float cnt = termFreqMap.get(word);

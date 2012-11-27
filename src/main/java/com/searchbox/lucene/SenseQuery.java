@@ -17,6 +17,7 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.IndexSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ public class SenseQuery extends CustomScoreQuery {
     private final CognitiveKnowledgeBase ckb;
     private final RealTermFreqVector qtfidf;
     private final DoubleFullVector qvector;
-    private double senseWeight = 1.0;
+    private float senseWeight = .8f;
 
     private static Query generateLuceneQuery(final String[] terms, final String senseField, final List<Query> filters) {
 
@@ -51,11 +52,13 @@ public class SenseQuery extends CustomScoreQuery {
 
     public static Analyzer getAnalyzerForField(final IndexSchema indexSchema, final String fieldName) {
         //TODO somehow check that field exists.
-        return indexSchema.getField(fieldName).getType().getAnalyzer();
+        FieldType type=indexSchema.getField(fieldName).getType();
+        System.out.println("Using this type:\t"+type.getTypeName());
+        return type.getAnalyzer();
     }
 
 
-    public SenseQuery(final RealTermFreqVector rtfv, final String senseField, double senseWeight, final List<Query> filters ) {
+    public SenseQuery(final RealTermFreqVector rtfv, final String senseField, float senseWeight, final List<Query> filters ) {
         super(generateLuceneQuery(rtfv.getTerms(), senseField, filters));
         this.senseField = senseField;
         this.senseWeight = senseWeight;
@@ -75,7 +78,8 @@ public class SenseQuery extends CustomScoreQuery {
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        return new SenseScoreProvider(context, senseField, ckb, qvector, qtfidf, senseWeight);
+        System.out.println("Using senseWeight:\t"+senseWeight);
+        return new SenseScoreProvider(context, senseField, ckb, qvector, qtfidf,(float) senseWeight);
     }
 
     public String getSenseField() {
@@ -91,11 +95,11 @@ public class SenseQuery extends CustomScoreQuery {
         return "sense with TF size: " + this.rtfv.getSize();
     }
 
-    public void setSenseWeight(double senseWeight) {
+    public void setSenseWeight(float senseWeight) {
         this.senseWeight = senseWeight;
     }
 
-    public double getSenseWeight() {
+    public float getSenseWeight() {
         return this.senseWeight;
     }
 }

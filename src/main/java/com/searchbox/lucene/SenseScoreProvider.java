@@ -8,19 +8,10 @@ import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.lucene.index.AtomicReaderContext;
-import org.apache.lucene.index.DocsEnum;
-import org.apache.lucene.index.Fields;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.queries.CustomScoreProvider;
-import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.Explanation;
-import org.apache.lucene.util.BytesRef;
-import org.apache.lucene.util.CharsRef;
-import org.apache.lucene.util.UnicodeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +26,13 @@ public class SenseScoreProvider extends CustomScoreProvider {
     private final CognitiveKnowledgeBase ckb;
     private final DoubleFullVector qvector;
     private final RealTermFreqVector qtfidf;
-    private final double senseWeight;
+    private final float senseWeight;
     private final String senseField;
-    //private HashMap <Integer, Float> scorecache= new HashMap();
+    
     
     
     SenseScoreProvider(AtomicReaderContext context, String senseField,
-            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, double ckbWeight) {
+            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, float ckbWeight) {
         super(context);
         this.ckb = ckb;
         this.qvector = qvector;
@@ -70,34 +61,13 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @return custom score.
      */
 
-    public static RealTermFreqVector getTermFreqmapfromTermsContainer(Terms terms) throws IOException {
-        if (terms != null) {
-            RealTermFreqVector rtfv = new RealTermFreqVector((int) terms.size());
-            final TermsEnum termsEnum = terms.iterator(null);
-            BytesRef text;
-            while ((text = termsEnum.next()) != null) {
-
-                final String term = text.utf8ToString();
-                final int freq = (int) termsEnum.totalTermFreq();
-                rtfv.set(term, freq, rtfv.getNextpos());
-            }
-            return rtfv;
-        } else {
-            return new RealTermFreqVector(0);
-        }
-    }
-    
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         
         float finalscore;
-        /*Float finalscore=scorecache.get(doc);
-        if(finalscore!=null){
-              return finalscore;
-        }*/
         
         Terms terms = context.reader().getTermVector(doc, this.senseField);
-        RealTermFreqVector rtfv= getTermFreqmapfromTermsContainer(terms);
+        RealTermFreqVector rtfv= new RealTermFreqVector(terms);
 
         if(LOGGER.isDebugEnabled())
             LOGGER.debug("Evaluating Document with TF size: " + rtfv.getSize());
@@ -128,7 +98,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
          finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
          if(LOGGER.isDebugEnabled())
             LOGGER.debug("Final score "+ finalscore);
-        //scorecache.put(doc, finalscore);
+        
         return finalscore; 
     }
 
@@ -149,8 +119,9 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @param valSrcScore score of that doc by the ValueSourceQuery.
      * @return custom score.
      */
+    @Override
     public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
-        System.out.println("Scoring document: " + doc);
+        System.out.println("Scoring document.....?! returnung 1k " + doc);
         return 1000f;
 
     }
@@ -166,6 +137,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @param valSrcExpls explanation for the value source part.
      * @return an explanation for the custom score
      */
+    @Override
     public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpls[]) throws IOException {
         if (valSrcExpls.length == 1) {
             return customExplain(doc, subQueryExpl, valSrcExpls[0]);
@@ -196,6 +168,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
      * @param valSrcExpl explanation for the value source part.
      * @return an explanation for the custom score
      */
+    @Override
     public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpl) throws IOException {
         float valSrcScore = 1;
         if (valSrcExpl != null) {

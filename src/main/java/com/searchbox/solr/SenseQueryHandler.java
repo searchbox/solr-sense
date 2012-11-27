@@ -95,7 +95,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
         DocList subFiltered = qr.getSubSetToSearchIn(filters);
         System.out.println("Number of documents to search:\t" + subFiltered.size());
-        SenseQuery slt = new SenseQuery(rtv, senseField, params.getDouble(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+        SenseQuery slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
         DocListAndSet sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
 
 
