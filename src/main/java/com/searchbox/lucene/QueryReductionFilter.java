@@ -86,7 +86,7 @@ public class QueryReductionFilter {
         Arrays.sort(hq);
 
         for (int zz = 0; zz < numtermstouse; zz++) {
-            System.out.print("\t\t"+rtvn.getTerms()[hq[zz].spot]);
+            System.out.print("\t\t("+rtvn.getTerms()[hq[zz].spot]+":"+hq[zz].value+")");
             TermQuery tqoutter = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[zz].spot]));
             BooleanQuery bqinner = new BooleanQuery();
 

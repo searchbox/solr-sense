@@ -165,7 +165,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         System.out.println("Number of documents to search:\t" + subFiltered.size());
         slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
         sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-
+        
         if (sltDocs == null) {
             sltDocs = new DocListAndSet(); // avoid NPE
         }

@@ -50,6 +50,7 @@ public class SenseQuery extends CustomScoreQuery {
         return topLevelQuery;
     }
 
+    
     public static Analyzer getAnalyzerForField(final IndexSchema indexSchema, final String fieldName) {
         //TODO somehow check that field exists.
         FieldType type=indexSchema.getField(fieldName).getType();

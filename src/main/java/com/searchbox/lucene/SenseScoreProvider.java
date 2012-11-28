@@ -8,6 +8,7 @@ import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
 import java.io.IOException;
+import java.util.HashMap;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.queries.CustomScoreProvider;
@@ -28,7 +29,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
     private final RealTermFreqVector qtfidf;
     private final float senseWeight;
     private final String senseField;
-    
+    private HashMap <Integer,Float> scoreCache= new HashMap();
     
     
     SenseScoreProvider(AtomicReaderContext context, String senseField,
@@ -64,8 +65,13 @@ public class SenseScoreProvider extends CustomScoreProvider {
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
         
-        float finalscore;
         
+        Float finalscore = scoreCache.get(doc);
+        System.out.println("Custom score on:\t"+doc);
+        if(finalscore!=null) {
+            System.out.println("Custom score on:\t"+doc+"\tfrom cache!");
+            return finalscore;
+        }
         Terms terms = context.reader().getTermVector(doc, this.senseField);
         RealTermFreqVector rtfv= new RealTermFreqVector(terms);
 
@@ -98,7 +104,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
          finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
          if(LOGGER.isDebugEnabled())
             LOGGER.debug("Final score "+ finalscore);
-        
+        scoreCache.put(doc, finalscore);
         return finalscore; 
     }
 

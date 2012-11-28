@@ -108,7 +108,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
 
 
         DocListAndSet sltDocs = null;
-        
+
         // Parse Required Params
         // This will either have a single Reader or valid query
         Reader reader = null;
@@ -151,21 +151,21 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 // Get docID
                 DocIterator iterator = match.iterator();
                 docID = iterator.nextDoc();
-                
-                    BooleanQuery bq=new BooleanQuery();
-                    Document doc=searcher.getIndexReader().document(docID);
-                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
-                    filters.add(bq);        
-                
-                
-                
+
+                BooleanQuery bq = new BooleanQuery();
+                Document doc = searcher.getIndexReader().document(docID);
+                bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+                filters.add(bq);
+
+
+
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
-            
-            String senseField=params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-            slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField),senseField,
+
+            String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+            slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField), senseField,
                     params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);
 
 
