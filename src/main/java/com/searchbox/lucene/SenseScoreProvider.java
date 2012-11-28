@@ -67,9 +67,9 @@ public class SenseScoreProvider extends CustomScoreProvider {
         
         
         Float finalscore = scoreCache.get(doc);
-        System.out.println("Custom score on:\t"+doc);
+        //System.out.println("Custom score on:\t"+doc);
         if(finalscore!=null) {
-            System.out.println("Custom score on:\t"+doc+"\tfrom cache!");
+          //  System.out.println("Custom score on:\t"+doc+"\tfrom cache!");
             return finalscore;
         }
         Terms terms = context.reader().getTermVector(doc, this.senseField);

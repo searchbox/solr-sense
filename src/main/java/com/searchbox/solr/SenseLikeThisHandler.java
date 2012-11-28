@@ -164,6 +164,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         DocList subFiltered = qr.getSubSetToSearchIn(filters);
         System.out.println("Number of documents to search:\t" + subFiltered.size());
         slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+        
         sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
         
         if (sltDocs == null) {

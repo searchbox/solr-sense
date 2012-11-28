@@ -20,7 +20,7 @@ public class VectorUtils {
             norm += vector[zz] * vector[zz];
         }
         if (norm == 0.0) {
-            return Float.MAX_VALUE;
+            return Float.NEGATIVE_INFINITY;
         } else {
             return (float) Math.sqrt(norm);
         }

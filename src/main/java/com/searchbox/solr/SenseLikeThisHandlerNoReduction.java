@@ -166,7 +166,7 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
 
             String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
             slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField), senseField,
-                    params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), filters);
+                    params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
 
 
             //Execute the SLT query
