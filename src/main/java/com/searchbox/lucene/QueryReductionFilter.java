@@ -68,8 +68,9 @@ public class QueryReductionFilter {
         BooleanQuery bqoutter = new BooleanQuery();
         int numterms = this.rtv.getSize();
         if(numtermstouse==-1) {
-            numtermstouse = (int) Math.round(numterms * 0.2D);
+            numtermstouse = (int) Math.max(Math.round(numterms * 0.2),5);
         }
+        System.out.println("Numtermstouse\t"+numtermstouse);
         RealTermFreqVector rtvn = rtv.getUnitVector();
 
         Holder[] hq = new Holder[numterms];
@@ -77,12 +78,15 @@ public class QueryReductionFilter {
             Holder lhq = new Holder();
             lhq.spot = zz;
             lhq.value = this.ckb.getFullCkbVector(rtvn.getTerms()[zz], rtvn.getFreqs()[zz]).getNorm();
+            
             hq[zz] = lhq;
         }
+        System.out.println();
 
         Arrays.sort(hq);
 
         for (int zz = 0; zz < numtermstouse; zz++) {
+            System.out.print("\t\t"+rtvn.getTerms()[zz]);
             TermQuery tqoutter = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[zz].spot]));
             BooleanQuery bqinner = new BooleanQuery();
 
@@ -109,12 +113,15 @@ public class QueryReductionFilter {
                 }
             }
         }
+        System.out.println();
         this.filterQR=bqoutter;
+        
         return bqoutter;
     }
     
     public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {
         Query filterQR=getFiltersForQueryRedux();
+        System.out.println("Filter used:\t"+filterQR);
         DocListAndSet filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
         return filtered.docList.subset(0,maxDocSubSet);
     }
