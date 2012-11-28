@@ -115,6 +115,7 @@ public class QueryReductionFilter {
     
     public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {
         Query filterQR=getFiltersForQueryRedux();
+        System.out.println("FILTER:\t"+filterQR);
         DocListAndSet filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
         return filtered.docList.subset(0,maxDocSubSet);
     }
