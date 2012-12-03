@@ -21,11 +21,11 @@ public class SenseParams {
     
     public static String SENSE_QR_NTU = "ntu";
     //public static int SENSE_QR_NTU_DEFAULT = -1;
-    public static int SENSE_QR_NTU_DEFAULT = 20;
+    public static int SENSE_QR_NTU_DEFAULT = 5;
     
     public static String SENSE_QR_THRESH = "ntt";
     //public static int  SENSE_QR_THRESH_DEFAULT = 500;
-    public static int  SENSE_QR_THRESH_DEFAULT = 10000;
+    public static int  SENSE_QR_THRESH_DEFAULT = 5000;
     
     
     public static String SENSE_QR_MAXDOC = "nmd";

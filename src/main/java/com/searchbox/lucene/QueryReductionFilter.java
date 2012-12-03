@@ -5,9 +5,15 @@ import com.searchbox.sense.CognitiveKnowledgeBase;
 import com.searchbox.solr.SenseQParserPlugin;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
@@ -26,6 +32,9 @@ public class QueryReductionFilter {
     private int numtermstouse=-1;
     private int maxDocSubSet=5000;
     private BooleanQuery filterQR;
+    private HashMap<TreeSet<Integer>,Long> subQuerycache=new HashMap<TreeSet<Integer>,Long>();
+    private HashSet<TreeSet<Integer>> outterQuery=new HashSet<TreeSet<Integer>>();
+    
 
     public BooleanQuery getFilterQR() {
         return filterQR;
@@ -65,7 +74,7 @@ public class QueryReductionFilter {
     }
 
     public BooleanQuery getFiltersForQueryRedux() throws IOException {
-        BooleanQuery bqoutter = new BooleanQuery();
+        filterQR = new BooleanQuery();
         int numterms = this.rtv.getSize();
         if(numtermstouse==-1) {
             numtermstouse = (int) Math.max(Math.round(numterms * 0.2),5);
@@ -86,17 +95,20 @@ public class QueryReductionFilter {
         Arrays.sort(hq);
 
         for (int zz = 0; zz < numtermstouse; zz++) {
+            TreeSet<Integer> outtertreeset= new TreeSet<Integer>();
+            outtertreeset.add(zz);
             System.out.print("  ("+rtvn.getTerms()[hq[zz].spot]+":"+hq[zz].value+")");
             TermQuery tqoutter = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[zz].spot]));
             BooleanQuery bqinner = new BooleanQuery();
 
             bqinner.add(tqoutter, BooleanClause.Occur.MUST);
-            long numdocs = this.searcher.getDocSet(tqoutter).size();
+            long numdocs = getNumDocs(outtertreeset,bqinner);
 
             if (numdocs <= this.threshold) {
-                bqoutter.add(bqinner, BooleanClause.Occur.SHOULD);
+                addToQuery(bqinner, BooleanClause.Occur.SHOULD, outtertreeset);
             } else {
                 for (int yy = 0; yy < numtermstouse; yy++) {
+                    TreeSet<Integer> innertreeset = (TreeSet<Integer>) outtertreeset.clone();
                     int lyy = yy;
                     if (zz == yy) {
                         continue;
@@ -104,19 +116,46 @@ public class QueryReductionFilter {
                     BooleanQuery bqinner2 = bqinner.clone();
                     long lnumdocs = numdocs;
                     while (lnumdocs > this.threshold) {
+                        //System.out.println(lyy+"\t"+numtermstouse+"\t"+lnumdocs);
                         TermQuery tqinner = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[lyy].spot]));
                         bqinner2.add(tqinner, BooleanClause.Occur.MUST);
-                        lnumdocs = this.searcher.getDocSet(bqinner2).size();
+                        innertreeset.add(lyy);
+                        lnumdocs = getNumDocs(innertreeset,bqinner2);
                         lyy++;
                     }
-                    bqoutter.add(bqinner2, BooleanClause.Occur.SHOULD);
+                    addToQuery(bqinner2, BooleanClause.Occur.SHOULD,innertreeset);
                 }
             }
         }
         System.out.println();
-        this.filterQR=bqoutter;
+        return this.filterQR;
+    }
+    
+    
+    private boolean addToQuery(BooleanQuery bqinner, Occur booleanclause,TreeSet<Integer> ts){
+        //returns true if it was added, false if it was already in the cache
+        if(outterQuery.contains(ts)){
+            System.out.print("+");
+            return false;
+        }
+        else{
+            this.filterQR.add(bqinner, booleanclause);
+            outterQuery.add(ts);
+        }
+        return true;
+    }
+            
+    private Long getNumDocs(TreeSet<Integer> treeset, Query q) throws IOException {
+        Long numdocs=subQuerycache.get(treeset);
         
-        return bqoutter;
+        if(numdocs==null){
+            numdocs=new Long(this.searcher.getDocSet(q).size());
+            subQuerycache.put(treeset, numdocs);
+        }else
+        {
+            //System.out.println("from cache!");
+        }
+        return numdocs;
     }
     
     public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {

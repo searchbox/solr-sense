@@ -76,6 +76,8 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         SolrParams params = req.getParams();
 
+        long startTime = System.nanoTime();
+        
         // Set field flags
         ReturnFields returnFields = new ReturnFields(req);
         rsp.setReturnFields(returnFields);
@@ -110,6 +112,8 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
+        
+        System.out.println("Elapsed:\t"+(System.nanoTime() - startTime));
         SolrIndexSearcher searcher = req.getSearcher();
         SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
 
@@ -152,7 +156,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         filters.add(bq);
 
         String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-
+    System.out.println("Elapsed 2:\t"+(System.nanoTime() - startTime));
         String CKBid = "1"; //TODO need to support different CKBs here or below?
         RealTermFreqVector rtv = new RealTermFreqVector(id, searcher.getIndexReader(), senseField);
         QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
@@ -160,13 +164,13 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
         qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
 
-
+System.out.println("Elapsed 3:\t"+(System.nanoTime() - startTime));
         DocList subFiltered = qr.getSubSetToSearchIn(filters);
         System.out.println("Number of documents to search:\t" + subFiltered.size());
         slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-        
+        System.out.println("Elapsed 4:\t"+(System.nanoTime() - startTime));
         sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-        
+        System.out.println("Elapsed 5:\t"+(System.nanoTime() - startTime));
         if (sltDocs == null) {
             sltDocs = new DocListAndSet(); // avoid NPE
         }
