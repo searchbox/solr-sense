@@ -41,6 +41,8 @@ public class SenseQueryHandler extends RequestHandlerBase {
     volatile long numErrors;
     volatile long numEmpty;
     volatile long numSubset;
+    volatile long numTermsConsidered;
+    volatile long numTermsUsed;
 
     @Override
     public void init(NamedList args) {
@@ -104,6 +106,10 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
             QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
             qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
+            
+            numTermsUsed+=qr.getNumtermstouse();
+            numTermsConsidered+=rtv.getSize();
+            
             qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
             qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
 
@@ -212,10 +218,17 @@ public class SenseQueryHandler extends RequestHandlerBase {
         all.add("empty", "" + numEmpty);
 
         if (numRequests != 0) {
-            all.add("averageFiltered", "" + numFiltered / numRequests);
-            all.add("averageSubset", "" + numSubset / numRequests);
-            all.add("avgTimePerRequest", "" + totalTime / numRequests);
-            all.add("avgRequestsPerSecond", "" + numRequests / (totalTime * 0.001));
+            all.add("averageFiltered", "" + (float)numFiltered / numRequests);
+            all.add("averageSubset", "" + (float)numSubset / numRequests);
+            
+            all.add("totalTermsConsidered", numTermsConsidered);
+            all.add("avgTermsConsidered",(float)numTermsConsidered/numRequests);
+            
+            all.add("totalTermsUsed", (float)numTermsConsidered);
+            all.add("avgTermsUsed",(float)numTermsUsed/numRequests);
+            
+            all.add("avgTimePerRequest", "" + (float)totalTime / numRequests);
+            all.add("avgRequestsPerSecond", "" + (float)numRequests / (totalTime * 0.001));
         } else {
             all.add("averageFiltered", "" + 0);
             all.add("averageSubset", "" + 0);
