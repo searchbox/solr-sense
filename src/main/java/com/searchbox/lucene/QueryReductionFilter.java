@@ -34,8 +34,14 @@ public class QueryReductionFilter {
     private BooleanQuery filterQR;
     private HashMap<TreeSet<Integer>,Long> subQuerycache=new HashMap<TreeSet<Integer>,Long>();
     private HashSet<TreeSet<Integer>> outterQuery=new HashSet<TreeSet<Integer>>();
-    
+    private DocListAndSet filtered;
 
+    public DocListAndSet getFiltered() {
+        return filtered;
+    }
+
+    
+    
     public BooleanQuery getFilterQR() {
         return filterQR;
     }
@@ -161,7 +167,7 @@ public class QueryReductionFilter {
     public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {
         Query filterQR=getFiltersForQueryRedux();
         System.out.println("Filter used:\t"+filterQR);
-        DocListAndSet filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
+        filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
         return filtered.docList.subset(0,maxDocSubSet);
     }
 

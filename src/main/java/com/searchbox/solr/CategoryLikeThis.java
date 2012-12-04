@@ -41,6 +41,7 @@ import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.ContentStream;
 import org.apache.solr.common.util.NamedList;
+import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
@@ -56,6 +57,12 @@ import org.apache.solr.search.*;
  * @since solr 1.3
  */
 public class CategoryLikeThis extends RequestHandlerBase {
+       volatile long numRequests;
+    volatile long numFiltered;
+    volatile long totalTime;
+    volatile long numErrors;
+    volatile long numEmpty;
+    volatile long numSubset;
     // Pattern is thread safe -- TODO? share this with general 'fl' param
 
     private static final Pattern splitList = Pattern.compile(",| ");
@@ -67,6 +74,10 @@ public class CategoryLikeThis extends RequestHandlerBase {
 
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
+          numRequests++;
+        long startTime = System.currentTimeMillis();
+
+        try {
         SolrParams params = req.getParams();
         String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
         BooleanQuery catfilter = new BooleanQuery();
@@ -102,6 +113,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 }
             }
         } catch (ParseException e) {
+            numErrors++;
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
@@ -121,6 +133,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                         reader = iter.next().getReader();
                     }
                     if (iter.hasNext()) {
+                        numErrors++;
                         throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                                 "SenseLikeThis does not support multiple ContentStreams");
                     }
@@ -133,6 +146,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
             // Find documents SenseLikeThis - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (reader != null) {
+                numErrors++;
                 throw new RuntimeException("SLT based on a reader is not yet implemented");
             } else if (q != null) {
 
@@ -173,6 +187,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 
 
             } else {
+                numErrors++;
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "CategoryLikeThis requires either a query (?q=) or text to find similar documents.");
             }
@@ -190,6 +205,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
         }
 
         if (cltDocs == null) {
+            numEmpty++;
             cltDocs = new DocListAndSet(); // avoid NPE
         }
         rsp.add("response", cltDocs.docList);
@@ -203,7 +219,11 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 rsp.add("facet_counts", f.getFacetCounts());
             }
         }
-
+      } catch (Exception e) {
+            numErrors++;
+        } finally {
+            totalTime += System.currentTimeMillis() - startTime;
+        }
 
 
     }
@@ -227,4 +247,30 @@ public class CategoryLikeThis extends RequestHandlerBase {
             return null;
         }
     }
+    
+    
+    @Override
+    public NamedList<Object> getStatistics() {
+        
+        NamedList all = new SimpleOrderedMap<Object>();
+        all.add("requests",""+ numRequests);
+        all.add("errors",""+ numErrors);
+        all.add("totalTime(ms)",""+ totalTime);
+        all.add("empty",""+ numEmpty);
+        
+        if (numRequests != 0) {
+            all.add("averageFiltered",""+ numFiltered / numRequests);
+            all.add("averageSubset",""+ numSubset / numRequests);
+            all.add("avgTimePerRequest",""+ totalTime / numRequests);
+            all.add("avgRequestsPerSecond",""+ numRequests / (totalTime*0.001));
+        } else {
+            all.add("averageFiltered",""+ 0);
+            all.add("averageSubset",""+ 0);
+            all.add("avgTimePerRequest",""+ 0);
+            all.add("avgRequestsPerSecond",""+ 0);
+        }
+
+        return all;
+    }
+    
 }
