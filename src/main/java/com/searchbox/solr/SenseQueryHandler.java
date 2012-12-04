@@ -197,6 +197,12 @@ public class SenseQueryHandler extends RequestHandlerBase {
     }
 
     @Override
+    public String getSource() {
+        return "";
+    }
+    
+    
+    @Override
     public NamedList<Object> getStatistics() {
 
         NamedList all = new SimpleOrderedMap<Object>();

@@ -262,5 +262,10 @@ public class CategoryLikeThis extends RequestHandlerBase {
 
         return all;
     }
+
+    @Override
+    public String getSource() {
+        return "";
+    }
     
 }

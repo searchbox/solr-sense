@@ -255,6 +255,10 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
         return "1.0";
     }
 
+    @Override
+    public String getSource() {
+        return "";
+    }
 
     @Override
     public NamedList<Object> getStatistics() {
