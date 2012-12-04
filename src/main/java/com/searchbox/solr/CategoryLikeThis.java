@@ -235,19 +235,9 @@ public class CategoryLikeThis extends RequestHandlerBase {
     }
 
     @Override
-    public String getSource() {
-        return "$URL: https://svn.apache.org/repos/asf/lucene/dev/branches/lucene_solr_4_0/solr/core/src/java/org/apache/solr/handler/MoreLikeThisHandler.java $";
+    public String getVersion() {
+        return "1.0";
     }
-
-    @Override
-    public URL[] getDocs() {
-        try {
-            return new URL[]{new URL("http://wiki.apache.org/solr/MoreLikeThis")};
-        } catch (MalformedURLException ex) {
-            return null;
-        }
-    }
-    
     
     @Override
     public NamedList<Object> getStatistics() {
