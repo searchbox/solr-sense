@@ -75,9 +75,10 @@ public class SenseScoreProvider extends CustomScoreProvider {
         Terms terms = context.reader().getTermVector(doc, this.senseField);
         RealTermFreqVector rtfv= new RealTermFreqVector(terms);
 
-        if(LOGGER.isDebugEnabled())
-            LOGGER.debug("Evaluating Document with TF size: " + rtfv.getSize());
-
+        if(LOGGER.isTraceEnabled()){
+            LOGGER.trace("Evaluating Document with TF size: " + rtfv.getSize());
+        }
+        
         if(LOGGER.isTraceEnabled()){
             for (int zz=0;zz<rtfv.getSize();zz++) {
                 LOGGER.trace("term: |" + rtfv.getTerms()[zz] + "| -- frequ: " + rtfv.getFreqs()[zz]);
@@ -91,19 +92,19 @@ public class SenseScoreProvider extends CustomScoreProvider {
         if (senseWeight != 0.0) {
             DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
             ckbscore = dvector.getDistance(qvector);
-             if(LOGGER.isDebugEnabled())
-                LOGGER.debug("ckbscore: " + ckbscore);
+             if(LOGGER.isTraceEnabled())
+                LOGGER.trace("ckbscore: " + ckbscore);
         }
         if (senseWeight != 1.0) {
             RealTermFreqVector dtfidf =ckb.getTfIdfVector(rtfv).getUnitVector();
             idfscore= dtfidf.getDistance(qtfidf);
-             if(LOGGER.isDebugEnabled())
-                LOGGER.debug("idfscore: " + idfscore);
+             if(LOGGER.isTraceEnabled())
+                LOGGER.trace("idfscore: " + idfscore);
         }
         
          finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
-         if(LOGGER.isDebugEnabled())
-            LOGGER.debug("Final score "+ finalscore);
+         if(LOGGER.isTraceEnabled())
+            LOGGER.trace("Final score "+ finalscore);
         scoreCache.put(doc, finalscore);
         return finalscore; 
     }
@@ -127,7 +128,7 @@ public class SenseScoreProvider extends CustomScoreProvider {
      */
     @Override
     public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
-        System.out.println("Scoring document.....?! returnung 1k " + doc);
+        LOGGER.trace("Scoring document.....?! returnung 1k " + doc);
         return 1000f;
 
     }

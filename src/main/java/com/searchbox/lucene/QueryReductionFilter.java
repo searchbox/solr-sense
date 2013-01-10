@@ -8,22 +8,25 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.MatchAllDocsQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.TermQuery;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.DocListAndSet;
+import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 public class QueryReductionFilter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryReductionFilter.class);
     private final CognitiveKnowledgeBase ckb;
     private RealTermFreqVector rtv;
     private SolrIndexSearcher searcher;
@@ -31,6 +34,7 @@ public class QueryReductionFilter {
     private int threshold = 500;
     private int numtermstouse=-1;
     private int maxDocSubSet=5000;
+    private int minDocSetSizeForFilter=10000;
     private BooleanQuery filterQR;
     private HashMap<TreeSet<Integer>,Long> subQuerycache=new HashMap<TreeSet<Integer>,Long>();
     private HashSet<TreeSet<Integer>> outterQuery=new HashSet<TreeSet<Integer>>();
@@ -40,7 +44,13 @@ public class QueryReductionFilter {
         return filtered;
     }
 
-    
+    public int getMinDocSetSizeForFilter() {
+        return minDocSetSizeForFilter;
+    }
+
+    public void setMinDocSetSizeForFilter(int minDocSetSizeForFilter) {
+        this.minDocSetSizeForFilter = minDocSetSizeForFilter;
+    }
     
     public BooleanQuery getFilterQR() {
         return filterQR;
@@ -73,19 +83,24 @@ public class QueryReductionFilter {
 
     
     public QueryReductionFilter(RealTermFreqVector rtv, String CKBid, SolrIndexSearcher searcher, String senseField) {
-        this.ckb = ((CognitiveKnowledgeBase) SenseQParserPlugin.ckbByID.get(CKBid));
+        this.ckb = ((CognitiveKnowledgeBase) SenseQParserPlugin.getCKBbyID(CKBid));
         this.rtv = rtv;
         this.searcher = searcher;
         this.senseField = senseField;
     }
 
-    public BooleanQuery getFiltersForQueryRedux() throws IOException {
+    public BooleanQuery getFiltersForQueryRedux(DocSet otherFilterDocSet) throws IOException {
         filterQR = new BooleanQuery();
         int numterms = this.rtv.getSize();
         if(numtermstouse==-1) {
             numtermstouse = (int) Math.max(Math.round(numterms * 0.2),5);
         }
-        System.out.println("Numtermstouse\t"+numtermstouse);
+        
+        if(numtermstouse>numterms){
+            numtermstouse=numterms;
+        }
+            
+        LOGGER.debug("Numtermstouse\t"+numtermstouse);
         RealTermFreqVector rtvn = rtv.getUnitVector();
 
         Holder[] hq = new Holder[numterms];
@@ -96,19 +111,19 @@ public class QueryReductionFilter {
             
             hq[zz] = lhq;
         }
-        System.out.println();
-
+        
+        LOGGER.debug("");
         Arrays.sort(hq);
 
         for (int zz = 0; zz < numtermstouse; zz++) {
             TreeSet<Integer> outtertreeset= new TreeSet<Integer>();
             outtertreeset.add(zz);
-            System.out.print("  ("+rtvn.getTerms()[hq[zz].spot]+":"+hq[zz].value+")");
+            LOGGER.debug("  ("+rtvn.getTerms()[hq[zz].spot]+":"+hq[zz].value+")");
             TermQuery tqoutter = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[zz].spot]));
             BooleanQuery bqinner = new BooleanQuery();
 
             bqinner.add(tqoutter, BooleanClause.Occur.MUST);
-            long numdocs = getNumDocs(outtertreeset,bqinner);
+            long numdocs = getNumDocs(outtertreeset,bqinner,otherFilterDocSet);
 
             if (numdocs <= this.threshold) {
                 addToQuery(bqinner, BooleanClause.Occur.SHOULD, outtertreeset);
@@ -126,14 +141,14 @@ public class QueryReductionFilter {
                         TermQuery tqinner = new TermQuery(new Term(this.senseField, rtvn.getTerms()[hq[lyy].spot]));
                         bqinner2.add(tqinner, BooleanClause.Occur.MUST);
                         innertreeset.add(lyy);
-                        lnumdocs = getNumDocs(innertreeset,bqinner2);
+                        lnumdocs = getNumDocs(innertreeset,bqinner2,otherFilterDocSet);
                         lyy++;
                     }
                     addToQuery(bqinner2, BooleanClause.Occur.SHOULD,innertreeset);
                 }
             }
         }
-        System.out.println();
+        LOGGER.debug("");
         return this.filterQR;
     }
     
@@ -141,7 +156,7 @@ public class QueryReductionFilter {
     private boolean addToQuery(BooleanQuery bqinner, Occur booleanclause,TreeSet<Integer> ts){
         //returns true if it was added, false if it was already in the cache
         if(outterQuery.contains(ts)){
-            System.out.print("+");
+            LOGGER.debug("+");
             return false;
         }
         else{
@@ -151,11 +166,11 @@ public class QueryReductionFilter {
         return true;
     }
             
-    private Long getNumDocs(TreeSet<Integer> treeset, Query q) throws IOException {
+    private Long getNumDocs(TreeSet<Integer> treeset, Query q,DocSet otherFilterDocSet) throws IOException {
         Long numdocs=subQuerycache.get(treeset);
         
         if(numdocs==null){
-            numdocs=new Long(this.searcher.getDocSet(q).size());
+            numdocs=new Long(this.searcher.getDocSet(q,otherFilterDocSet).size());
             subQuerycache.put(treeset, numdocs);
         }else
         {
@@ -165,9 +180,20 @@ public class QueryReductionFilter {
     }
     
     public DocList getSubSetToSearchIn(List<Query> otherFilter) throws IOException {
-        Query filterQR=getFiltersForQueryRedux();
-        System.out.println("Filter used:\t"+filterQR);
-        filtered = searcher.getDocListAndSet(filterQR, otherFilter, Sort.RELEVANCE, 0, maxDocSubSet);
+        DocSet otherFilterDocSet=this.searcher.getDocSet(otherFilter);
+        LOGGER.debug("otherFilterDocSet size:\t"+otherFilterDocSet.size());
+        Query filterQR;
+        
+        if(otherFilterDocSet.size()<=minDocSetSizeForFilter){
+            LOGGER.debug("Filterset too small, not doing query reduction");
+            filterQR=new MatchAllDocsQuery();
+        }else
+        {
+            filterQR=getFiltersForQueryRedux(otherFilterDocSet);
+        }
+        
+        LOGGER.debug("Filter used:\t"+filterQR);
+        filtered = searcher.getDocListAndSet(filterQR, otherFilterDocSet, Sort.RELEVANCE, 0, maxDocSubSet);
         return filtered.docList.subset(0,maxDocSubSet);
     }
 

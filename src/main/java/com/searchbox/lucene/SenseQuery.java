@@ -54,17 +54,17 @@ public class SenseQuery extends CustomScoreQuery {
     public static Analyzer getAnalyzerForField(final IndexSchema indexSchema, final String fieldName) {
         //TODO somehow check that field exists.
         FieldType type=indexSchema.getField(fieldName).getType();
-        System.out.println("Using this type:\t"+type.getTypeName());
+        LOGGER.debug("Using this type:\t"+type.getTypeName());
         return type.getAnalyzer();
     }
 
 
-    public SenseQuery(final RealTermFreqVector rtfv, final String senseField, float senseWeight, final List<Query> filters ) {
+    public SenseQuery(final RealTermFreqVector rtfv, final String senseField, final String ckbID,float senseWeight, final List<Query> filters ) {
         super(generateLuceneQuery(rtfv.getTerms(), senseField, filters));
         this.senseField = senseField;
         this.senseWeight = senseWeight;
         //TODO shoul be getting a CKB by some clever method
-        this.ckb = SenseQParserPlugin.ckbByID.get("1");
+        this.ckb = SenseQParserPlugin.getCKBbyID(ckbID);
         this.rtfv = rtfv;
 
         //always compute these, even if senseWeight is 0 or 1 because we can change the value later and it will be null causing error
@@ -75,11 +75,11 @@ public class SenseQuery extends CustomScoreQuery {
     
     @Override
     protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
-        System.out.println("Setting up custom score provider.");
+        LOGGER.debug("Setting up custom score provider.");
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }
-        System.out.println("Using senseWeight:\t"+senseWeight);
+        LOGGER.debug("Using senseWeight:\t"+senseWeight);
         return new SenseScoreProvider(context, senseField, ckb, qvector, qtfidf,(float) senseWeight);
     }
 

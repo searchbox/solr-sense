@@ -20,6 +20,7 @@ import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.lucene.QueryReductionFilter;
+import com.searchbox.utils.SolrCacheKey;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -59,7 +60,6 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     // Pattern is thread safe -- TODO? share this with general 'fl' param
 
     private static Logger LOGGER = LoggerFactory.getLogger(SenseLikeThisHandler.class);
-     
     volatile long numRequests;
     volatile long numFiltered;
     volatile long totalTime;
@@ -68,7 +68,6 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     volatile long numSubset;
     volatile long numTermsConsidered;
     volatile long numTermsUsed;
-    
     private static final Pattern splitList = Pattern.compile(",| ");
 
     @Override
@@ -80,28 +79,17 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         numRequests++;
         long startTime = System.currentTimeMillis();
-        SolrIndexSearcher searcher = req.getSearcher();
-        SolrCache sc=searcher.getCache("sltcache");
-        DocListAndSet sltDocs=null;
-        
-        
-        if (sc != null) {
-            //try to get from cache
-            SolrQueryResponse trsp = (SolrQueryResponse) sc.get(req.toString());
-            if (trsp != null) {
-                LOGGER.debug("Got result from cache");
-                rsp.setAllValues(trsp.getValues());
-                rsp.setReturnFields(trsp.getReturnFields());
-                return;
-            }
-        }
-            
-       
-        
+
+
+
         try {
             SolrParams params = req.getParams();
-
-
+            int start = params.getInt(CommonParams.START, 0);
+            int rows = params.getInt(CommonParams.ROWS, 10);
+            
+            
+            SolrCacheKey key= new SolrCacheKey(params);
+            
             // Set field flags
             ReturnFields returnFields = new ReturnFields(req);
             rsp.setReturnFields(returnFields);
@@ -114,7 +102,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             String q = params.get(CommonParams.Q);
             Query query = null;
             SortSpec sortSpec = null;
-            List<Query> filters = filters = new ArrayList<Query>();
+            List<Query> filters  = new ArrayList<Query>();
 
             try {
                 if (q != null) {
@@ -137,19 +125,19 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
             }
 
-            
+
             LOGGER.debug("Elapsed:\t" + (System.currentTimeMillis() - startTime));
-            
-            
+
+
+            SolrIndexSearcher searcher = req.getSearcher();
             SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
 
-            
+
 
             // Parse Required Params
             // This will either have a single Reader or valid query
 
-            int start = params.getInt(CommonParams.START, 0);
-            int rows = params.getInt(CommonParams.ROWS, 10);
+            
 
             // Find documents SenseLikeThis - either with a reader or a query
             // --------------------------------------------------------------------------------
@@ -179,42 +167,64 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             }
             int id = iterator.nextDoc();
 
-            BooleanQuery bq = new BooleanQuery();
-            Document doc = searcher.getIndexReader().document(id);
-            bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
-            filters.add(bq);
 
-            String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-            LOGGER.debug("Elapsed 2:\t" + (System.currentTimeMillis() - startTime));
-            String CKBid = params.get(SenseParams.SENSE_CKB,SenseParams.SENSE_CKB_DEFAULT);
-                    
-            RealTermFreqVector rtv = new RealTermFreqVector(id, searcher.getIndexReader(), senseField);
-            QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
-            qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
-            qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
-            qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
-            qr.setMinDocSetSizeForFilter(params.getInt(SenseParams.SENSE_MINDOC4QR, SenseParams.SENSE_MINDOC4QR_DEFAULT));
-            
-            numTermsUsed+=qr.getNumtermstouse();
-            numTermsConsidered+=rtv.getSize();
-            
-            LOGGER.debug("Elapsed 3:\t" + (System.currentTimeMillis() - startTime));
-            DocList subFiltered = qr.getSubSetToSearchIn(filters);
-            numFiltered += qr.getFiltered().docList.size();
-            numSubset += subFiltered.size();
-            LOGGER.info("Number of documents to search:\t" + subFiltered.size());
-            
-            slt = new SenseQuery(rtv, senseField, CKBid,params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-            LOGGER.debug("Elapsed 4:\t" + (System.currentTimeMillis() - startTime));
-            sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-            
-            
+            SolrCache sc = searcher.getCache("sltcache");
+            DocListAndSet sltDocs = null;
+            if (sc != null) {
+                //try to get from cache
+                
+                sltDocs = (DocListAndSet) sc.get(key.getSet());
+                if (start+rows>1000 || sltDocs == null) { //not in cache, need to do search
+                    BooleanQuery bq = new BooleanQuery();
+                    Document doc = searcher.getIndexReader().document(id);
+                    bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
+                    filters.add(bq);
+
+                    String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+                    LOGGER.debug("Elapsed 2:\t" + (System.currentTimeMillis() - startTime));
+                    String CKBid = params.get(SenseParams.SENSE_CKB, SenseParams.SENSE_CKB_DEFAULT);
+
+                    RealTermFreqVector rtv = new RealTermFreqVector(id, searcher.getIndexReader(), senseField);
+                    QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
+                    qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
+                    qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
+                    qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
+                    qr.setMinDocSetSizeForFilter(params.getInt(SenseParams.SENSE_MINDOC4QR, SenseParams.SENSE_MINDOC4QR_DEFAULT));
+
+                    numTermsUsed += qr.getNumtermstouse();
+                    numTermsConsidered += rtv.getSize();
+
+                    LOGGER.debug("Elapsed 3:\t" + (System.currentTimeMillis() - startTime));
+                    DocList subFiltered = qr.getSubSetToSearchIn(filters);
+                    numFiltered += qr.getFiltered().docList.size();
+                    numSubset += subFiltered.size();
+                    LOGGER.info("Number of documents to search:\t" + subFiltered.size());
+
+                    slt = new SenseQuery(rtv, senseField, CKBid, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+                    LOGGER.debug("Elapsed 4:\t" + (System.currentTimeMillis() - startTime));
+                    sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, 0, 1000, flags);
+
+
+                    LOGGER.debug("Adding this keyto cache:\t"+key.getSet().toString());
+                    searcher.getCache("sltcache").put(key.getSet(), sltDocs);
+
+
+
+                } else {
+                    LOGGER.debug("Got result from cache");
+                }
+            }else
+            {
+                LOGGER.error("sltcache not defined, can't cache slt queries");
+            }
+
+
             LOGGER.debug("Elapsed 5:\t" + (System.currentTimeMillis() - startTime));
             if (sltDocs == null) {
                 numEmpty++;
                 sltDocs = new DocListAndSet(); // avoid NPE
             }
-            rsp.add("response", sltDocs.docList);
+            rsp.add("response", sltDocs.docList.subset(start, rows));
 
 
             // maybe facet the results
@@ -267,12 +277,11 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                     rsp.add("exception_during_debug", SolrException.toStr(e));
                 }
             }
-            
-            
-            //stick in cache
-            searcher.getCache("sltcache").put(req.toString(),rsp);
-            
-            
+
+
+
+
+
         } catch (Exception e) {
             numErrors++;
             e.printStackTrace();
@@ -300,33 +309,33 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
 
     @Override
     public NamedList<Object> getStatistics() {
-        
+
         NamedList all = new SimpleOrderedMap<Object>();
-        all.add("requests",""+ numRequests);
-        all.add("errors",""+ numErrors);
-        all.add("totalTime(ms)",""+ totalTime);
-        all.add("empty",""+ numEmpty);
-        
+        all.add("requests", "" + numRequests);
+        all.add("errors", "" + numErrors);
+        all.add("totalTime(ms)", "" + totalTime);
+        all.add("empty", "" + numEmpty);
+
         if (numRequests != 0) {
-            all.add("averageFiltered",""+ (float)numFiltered / numRequests);
-            all.add("averageSubset",""+ (float)numSubset / numRequests);
-            
-            
+            all.add("averageFiltered", "" + (float) numFiltered / numRequests);
+            all.add("averageSubset", "" + (float) numSubset / numRequests);
+
+
             all.add("totalTermsConsidered", numTermsConsidered);
-            all.add("avgTermsConsidered",(float)numTermsConsidered/numRequests);
-            
+            all.add("avgTermsConsidered", (float) numTermsConsidered / numRequests);
+
             all.add("totalTermsUsed", numTermsConsidered);
-            all.add("avgTermsUsed",(float)numTermsUsed/numRequests);
-            
-            
-            
-            all.add("avgTimePerRequest",""+ (float)totalTime / numRequests);
-            all.add("avgRequestsPerSecond",""+ (float)numRequests / (totalTime*0.001));
+            all.add("avgTermsUsed", (float) numTermsUsed / numRequests);
+
+
+
+            all.add("avgTimePerRequest", "" + (float) totalTime / numRequests);
+            all.add("avgRequestsPerSecond", "" + (float) numRequests / (totalTime * 0.001));
         } else {
-            all.add("averageFiltered",""+ 0);
-            all.add("averageSubset",""+ 0);
-            all.add("avgTimePerRequest",""+ 0);
-            all.add("avgRequestsPerSecond",""+ 0);
+            all.add("averageFiltered", "" + 0);
+            all.add("averageSubset", "" + 0);
+            all.add("avgTimePerRequest", "" + 0);
+            all.add("avgRequestsPerSecond", "" + 0);
         }
 
         return all;

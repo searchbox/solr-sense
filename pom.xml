@@ -3,11 +3,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.searchbox</groupId>
-    <artifactId>solr-sense</artifactId>
+    <artifactId>searchbox-sense</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>solr-sense</name>
+    <name>searchbox-sense</name>
     <url>http://maven.apache.org</url>
 
     <properties>

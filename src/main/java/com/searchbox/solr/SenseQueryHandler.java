@@ -8,6 +8,7 @@ import com.searchbox.commons.params.SenseParams;
 import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.lucene.QueryReductionFilter;
+import com.searchbox.utils.SolrCacheKey;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.lucene.queryparser.classic.ParseException;
@@ -27,7 +28,10 @@ import org.apache.solr.search.DocList;
 import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.ReturnFields;
+import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  *
@@ -43,6 +47,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
     volatile long numSubset;
     volatile long numTermsConsidered;
     volatile long numTermsUsed;
+    private static final Logger LOGGER = LoggerFactory.getLogger(SenseQueryHandler.class);
 
     @Override
     public void init(NamedList args) {
@@ -56,6 +61,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
         try {
             SolrParams params = req.getParams();
+            SolrCacheKey key = new SolrCacheKey(params);
 
             // Set field flags
             ReturnFields returnFields = new ReturnFields(req);
@@ -99,35 +105,52 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
 
             SolrIndexSearcher searcher = req.getSearcher();
+            SolrCache sc = searcher.getCache("sltcache");
+            DocListAndSet sltDocs = null;
+            if (sc != null) {
+                //try to get from cache
 
-            String CKBid = "1"; //TODO need to support different CKBs here or below?
-            String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-            RealTermFreqVector rtv = new RealTermFreqVector(q, SenseQuery.getAnalyzerForField(req.getSchema(), senseField));
+                sltDocs = (DocListAndSet) sc.get(key.getSet());
+                if (start + rows > 1000 || sltDocs == null) { //not in cache, need to do search
+                    String CKBid = params.get(SenseParams.SENSE_CKB, SenseParams.SENSE_CKB_DEFAULT);
+                    String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
+                    RealTermFreqVector rtv = new RealTermFreqVector(q, SenseQuery.getAnalyzerForField(req.getSchema(), senseField));
 
-            QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
-            qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
-            
-            numTermsUsed+=qr.getNumtermstouse();
-            numTermsConsidered+=rtv.getSize();
-            
-            qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
-            qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
+                    QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
+                    qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
 
-            DocList subFiltered = qr.getSubSetToSearchIn(filters);
+                    numTermsUsed += qr.getNumtermstouse();
+                    numTermsConsidered += rtv.getSize();
+
+                    qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
+                    qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
+                    qr.setMinDocSetSizeForFilter(params.getInt(SenseParams.SENSE_MINDOC4QR, SenseParams.SENSE_MINDOC4QR_DEFAULT));
 
 
-            numFiltered += qr.getFiltered().docList.size();
-            numSubset += subFiltered.size();
-            System.out.println("Number of documents to search:\t" + subFiltered.size());
-            SenseQuery slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-            DocListAndSet sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
+                    DocList subFiltered = qr.getSubSetToSearchIn(filters);
 
+
+                    numFiltered += qr.getFiltered().docList.size();
+                    numSubset += subFiltered.size();
+                    LOGGER.info("Number of documents to search:\t" + subFiltered.size());
+                    SenseQuery slt = new SenseQuery(rtv, senseField, CKBid, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+                    sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, 0, 1000, flags);
+                    
+                    LOGGER.debug("Adding this keyto cache:\t"+key.getSet().toString());
+                    searcher.getCache("sltcache").put(key.getSet(), sltDocs);
+                    
+                } else {
+                    LOGGER.debug("Got result from cache");
+                }
+            } else {
+                LOGGER.error("sltcache not defined, can't cache slt queries");
+            }
 
             if (sltDocs == null) {
                 numEmpty++;
                 sltDocs = new DocListAndSet(); // avoid NPE
             }
-            rsp.add("response", sltDocs.docList);
+            rsp.add("response", sltDocs.docList.subset(start, rows));
 
             // --------- OLD CODE BELOW
             // maybe facet the results
@@ -160,6 +183,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
                 dbgResults = true;
             }
         } catch (Exception e) {
+            e.printStackTrace();
             numErrors++;
         } finally {
             totalTime += System.currentTimeMillis() - startTime;
@@ -206,8 +230,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
     public String getSource() {
         return "";
     }
-    
-    
+
     @Override
     public NamedList<Object> getStatistics() {
 
@@ -218,17 +241,17 @@ public class SenseQueryHandler extends RequestHandlerBase {
         all.add("empty", "" + numEmpty);
 
         if (numRequests != 0) {
-            all.add("averageFiltered", "" + (float)numFiltered / numRequests);
-            all.add("averageSubset", "" + (float)numSubset / numRequests);
-            
+            all.add("averageFiltered", "" + (float) numFiltered / numRequests);
+            all.add("averageSubset", "" + (float) numSubset / numRequests);
+
             all.add("totalTermsConsidered", numTermsConsidered);
-            all.add("avgTermsConsidered",(float)numTermsConsidered/numRequests);
-            
-            all.add("totalTermsUsed", (float)numTermsConsidered);
-            all.add("avgTermsUsed",(float)numTermsUsed/numRequests);
-            
-            all.add("avgTimePerRequest", "" + (float)totalTime / numRequests);
-            all.add("avgRequestsPerSecond", "" + (float)numRequests / (totalTime * 0.001));
+            all.add("avgTermsConsidered", (float) numTermsConsidered / numRequests);
+
+            all.add("totalTermsUsed", (float) numTermsConsidered);
+            all.add("avgTermsUsed", (float) numTermsUsed / numRequests);
+
+            all.add("avgTimePerRequest", "" + (float) totalTime / numRequests);
+            all.add("avgRequestsPerSecond", "" + (float) numRequests / (totalTime * 0.001));
         } else {
             all.add("averageFiltered", "" + 0);
             all.add("averageSubset", "" + 0);

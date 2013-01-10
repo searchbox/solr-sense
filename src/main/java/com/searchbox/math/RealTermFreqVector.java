@@ -9,8 +9,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -18,6 +16,10 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
+
+
 
 /**
  *
@@ -25,6 +27,7 @@ import org.apache.lucene.util.BytesRef;
  */
 public class RealTermFreqVector {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(RealTermFreqVector.class);
     private String[] terms;
     private float[] freqs;
     int size;
@@ -188,7 +191,7 @@ public class RealTermFreqVector {
             }
 
         } catch (IOException ex) {
-            Logger.getLogger(RealTermFreqVector.class.getName()).log(Level.SEVERE, null, ex);
+            LOGGER.error(ex.toString());
         }
 
         return termFreqMap;
@@ -206,7 +209,7 @@ public class RealTermFreqVector {
 
             while (ts.incrementToken()) {
                 String word = termAtt.toString();
-                System.out.println("\tAdding Term:\t" + word);
+                LOGGER.debug("\tAdding Term:\t" + word);
                 tokenCount++;
                 // increment frequency
                 Float cnt = termFreqMap.get(word);
@@ -219,8 +222,7 @@ public class RealTermFreqVector {
 
             ts.end();
         } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(SenseQuery.class
-                    .getName()).log(Level.SEVERE, null, ex);
+            LOGGER.error(ex.toString());
         }
 
         return termFreqMap;

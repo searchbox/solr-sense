@@ -18,6 +18,11 @@ public class SenseParams {
     
     public static String SENSE_QPARSER = "sense";
     
+    public static String SENSE_CKB_DEFAULT="1";
+    public static String SENSE_CKB = "ckb";
+    
+    public static String SENSE_MINDOC4QR="mdq";
+    public static int SENSE_MINDOC4QR_DEFAULT=10000;
     
     public static String SENSE_QR_NTU = "ntu";
     //public static int SENSE_QR_NTU_DEFAULT = -1;

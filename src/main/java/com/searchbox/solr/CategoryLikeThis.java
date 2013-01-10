@@ -47,6 +47,8 @@ import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.search.*;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  * Solr MoreLikeThis --
@@ -57,7 +59,10 @@ import org.apache.solr.search.*;
  * @since solr 1.3
  */
 public class CategoryLikeThis extends RequestHandlerBase {
-       volatile long numRequests;
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(CategoryLikeThis.class);
+
+    volatile long numRequests;
     volatile long numFiltered;
     volatile long totalTime;
     volatile long numErrors;
@@ -150,10 +155,10 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 throw new RuntimeException("SLT based on a reader is not yet implemented");
             } else if (q != null) {
 
-                System.out.println("Query for category:\t" + query);
+                LOGGER.debug("Query for category:\t" + query);
                 DocList match = searcher.getDocList(query, null, null, 0, 10, flags); // get first 10
                 if (match.size() == 0) { // no docs to make prototype!
-                    System.out.println("No documents found for prototype!");
+                    LOGGER.info("No documents found for prototype!");
                     rsp.add("response", new DocListAndSet());
                     return;
                 }
@@ -165,7 +170,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 while (iterator.hasNext()) {
                     // do a MoreLikeThis query for each document in results
                     int id = iterator.nextDoc();
-                    System.out.println("Working on doc:\t" + id);
+                    LOGGER.trace("Working on doc:\t" + id);
                     RealTermFreqVector rtv = new RealTermFreqVector(id,searcher.getIndexReader(),senseField);
                     for (int zz=0;zz<rtv.getSize();zz++){
                         Float prev= overallFreqMap.get(rtv.getTerms()[zz]);
@@ -178,8 +183,8 @@ public class CategoryLikeThis extends RequestHandlerBase {
                 
                 List<String> sortedKeys = Ordering.natural().onResultOf(Functions.forMap(overallFreqMap)).immutableSortedCopy(overallFreqMap.keySet());
                 int keyiter = Math.min(sortedKeys.size() - 1, BooleanQuery.getMaxClauseCount() - 1);
-                System.out.println("I have this many terms:\t" + sortedKeys.size());
-                System.out.println("And i'm going to use this many:\t" + keyiter);
+                LOGGER.debug("I have this many terms:\t" + sortedKeys.size());
+                LOGGER.debug("And i'm going to use this many:\t" + keyiter);
                 for (; keyiter >= 0; keyiter--) {
                     TermQuery tq = new TermQuery(new Term(senseField, sortedKeys.get(keyiter)));
                     catfilter.add(tq, BooleanClause.Occur.SHOULD);
@@ -192,7 +197,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                         "CategoryLikeThis requires either a query (?q=) or text to find similar documents.");
             }
 
-            System.out.println(
+            LOGGER.debug(
                     "document filter is: \t" + catfilter);
             CategorizationBase model = new CategorizationBase(prototypetfs);
             CategoryQuery clt = CategoryQuery.CategoryQueryForDocument(catfilter, model, searcher.getIndexReader(), senseField);

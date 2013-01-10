@@ -22,12 +22,26 @@ import org.slf4j.LoggerFactory;
  */
 public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
 
-    public static HashMap<String, CognitiveKnowledgeBase> ckbByID = new HashMap<String, CognitiveKnowledgeBase>();
+    private static HashMap<String, CognitiveKnowledgeBase> ckbByID = new HashMap<String, CognitiveKnowledgeBase>();
     private static final Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
     public static final String NAME = "sense";
     
     private SolrParams defaults;
 
+    
+    public static CognitiveKnowledgeBase getCKBbyID(String ckbID){
+        CognitiveKnowledgeBase ckb=null;
+        try{
+             ckb=ckbByID.get(ckbID);
+        }
+        catch (Exception e){ // should be a more accurate exception catch
+            LOGGER.error("Missing CKB with ckbID\t"+ckbID);
+        }
+        finally{
+            return ckb;
+        }
+    }
+    
     @Override
     public QParser createParser(String query, SolrParams localParams, SolrParams params, SolrQueryRequest sqr) {
         QParser parentQparser = super.createParser(query, localParams, params, sqr);

@@ -6,11 +6,11 @@ package com.searchbox.sense;
 
 import com.searchbox.solr.SenseQParserPlugin;
 import java.util.HashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 /**
  *
@@ -18,7 +18,8 @@ import javax.naming.NamingException;
  */
 public class CKBService {
   
-  private HashMap<String, String> ckbs;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CKBService.class);
+    private HashMap<String, String> ckbs;
 
   public CKBService() {
     this.ckbs = new HashMap<String, String>();
@@ -26,11 +27,11 @@ public class CKBService {
 
   public String getCKB(String name) {
     if (!ckbs.containsKey(name)) {
-      System.out.println("Loading CKB: " + name);
+      LOGGER.info("Loading CKB: " + name);
       try {
         Thread.sleep(5000);
       } catch (InterruptedException ex) {
-        Logger.getLogger(CKBService.class.getName()).log(Level.SEVERE, null, ex);
+        LOGGER.error(ex.toString());
       }
       this.ckbs.put(name, System.currentTimeMillis()+"");
     }
@@ -50,7 +51,7 @@ public class CKBService {
       try {
         sbCtx = initCtx.createSubcontext("searchbox");
       } catch (NamingException ex1) {
-        Logger.getLogger(CKBService.class.getName()).log(Level.SEVERE, null, ex1);
+        LOGGER.error(ex1.toString());
       }
     }
     
@@ -58,12 +59,12 @@ public class CKBService {
     try {
       ckbsrv = (CKBService) sbCtx.lookup("bean/CKBService");
     } catch (NamingException ex) {
-      System.out.println("Creating new CKBService in JNDI");
+      LOGGER.info("Creating new CKBService in JNDI");
       ckbsrv = new CKBService();
       try {
         sbCtx.bind("bean/CKBService", ckbsrv);
       } catch (NamingException ex1) {
-        Logger.getLogger(CKBService.class.getName()).log(Level.SEVERE, null, ex1);
+          LOGGER.error(ex1.toString());
       }
     }
     

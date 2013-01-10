@@ -39,7 +39,7 @@ public class CategoryQuery extends CustomScoreQuery {
     
     @Override
     protected CustomScoreProvider getCustomScoreProvider(AtomicReaderContext context) throws IOException {
-        System.out.println("Setting up custom score provider.");
+        LOGGER.debug("Setting up custom score provider.");
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Overriding ScoreProvider for IndexReader " + context);
         }

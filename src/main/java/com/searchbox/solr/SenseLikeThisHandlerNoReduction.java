@@ -163,9 +163,11 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
+            
+            String CKBid = params.get(SenseParams.SENSE_CKB,SenseParams.SENSE_CKB_DEFAULT);
 
             String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-            slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField), senseField,
+            slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField), senseField, CKBid,
                     params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
 
 
