@@ -44,6 +44,8 @@ import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Solr MoreLikeThis --
@@ -56,6 +58,8 @@ import org.apache.solr.util.SolrPluginUtils;
 public class SenseLikeThisHandler extends RequestHandlerBase {
     // Pattern is thread safe -- TODO? share this with general 'fl' param
 
+    private static Logger LOGGER = LoggerFactory.getLogger(SenseLikeThisHandler.class);
+     
     volatile long numRequests;
     volatile long numFiltered;
     volatile long totalTime;
@@ -76,7 +80,24 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         numRequests++;
         long startTime = System.currentTimeMillis();
-
+        SolrIndexSearcher searcher = req.getSearcher();
+        SolrCache sc=searcher.getCache("sltcache");
+        DocListAndSet sltDocs=null;
+        
+        
+        if (sc != null) {
+            //try to get from cache
+            SolrQueryResponse trsp = (SolrQueryResponse) sc.get(req.toString());
+            if (trsp != null) {
+                LOGGER.debug("Got result from cache");
+                rsp.setAllValues(trsp.getValues());
+                rsp.setReturnFields(trsp.getReturnFields());
+                return;
+            }
+        }
+            
+       
+        
         try {
             SolrParams params = req.getParams();
 
@@ -116,12 +137,13 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
             }
 
-
-            System.out.println("Elapsed:\t" + (System.currentTimeMillis() - startTime));
-            SolrIndexSearcher searcher = req.getSearcher();
+            
+            LOGGER.debug("Elapsed:\t" + (System.currentTimeMillis() - startTime));
+            
+            
             SchemaField uniqueKeyField = searcher.getSchema().getUniqueKeyField();
 
-            DocListAndSet sltDocs = null;
+            
 
             // Parse Required Params
             // This will either have a single Reader or valid query
@@ -163,28 +185,31 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             filters.add(bq);
 
             String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
-            System.out.println("Elapsed 2:\t" + (System.currentTimeMillis() - startTime));
-            String CKBid = "1"; //TODO need to support different CKBs here or below?
+            LOGGER.debug("Elapsed 2:\t" + (System.currentTimeMillis() - startTime));
+            String CKBid = params.get(SenseParams.SENSE_CKB,SenseParams.SENSE_CKB_DEFAULT);
+                    
             RealTermFreqVector rtv = new RealTermFreqVector(id, searcher.getIndexReader(), senseField);
             QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
             qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
             qr.setThreshold(params.getInt(SenseParams.SENSE_QR_THRESH, SenseParams.SENSE_QR_THRESH_DEFAULT));
             qr.setMaxDocSubSet(params.getInt(SenseParams.SENSE_QR_MAXDOC, SenseParams.SENSE_QR_MAXDOC_DEFAULT));
-
+            qr.setMinDocSetSizeForFilter(params.getInt(SenseParams.SENSE_MINDOC4QR, SenseParams.SENSE_MINDOC4QR_DEFAULT));
+            
             numTermsUsed+=qr.getNumtermstouse();
             numTermsConsidered+=rtv.getSize();
             
-            System.out.println("Elapsed 3:\t" + (System.currentTimeMillis() - startTime));
+            LOGGER.debug("Elapsed 3:\t" + (System.currentTimeMillis() - startTime));
             DocList subFiltered = qr.getSubSetToSearchIn(filters);
-
-
             numFiltered += qr.getFiltered().docList.size();
             numSubset += subFiltered.size();
-            System.out.println("Number of documents to search:\t" + subFiltered.size());
-            slt = new SenseQuery(rtv, senseField, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
-            System.out.println("Elapsed 4:\t" + (System.currentTimeMillis() - startTime));
+            LOGGER.info("Number of documents to search:\t" + subFiltered.size());
+            
+            slt = new SenseQuery(rtv, senseField, CKBid,params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+            LOGGER.debug("Elapsed 4:\t" + (System.currentTimeMillis() - startTime));
             sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, start, rows, flags);
-            System.out.println("Elapsed 5:\t" + (System.currentTimeMillis() - startTime));
+            
+            
+            LOGGER.debug("Elapsed 5:\t" + (System.currentTimeMillis() - startTime));
             if (sltDocs == null) {
                 numEmpty++;
                 sltDocs = new DocListAndSet(); // avoid NPE
@@ -242,8 +267,15 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                     rsp.add("exception_during_debug", SolrException.toStr(e));
                 }
             }
+            
+            
+            //stick in cache
+            searcher.getCache("sltcache").put(req.toString(),rsp);
+            
+            
         } catch (Exception e) {
             numErrors++;
+            e.printStackTrace();
         } finally {
             totalTime += System.currentTimeMillis() - startTime;
         }
