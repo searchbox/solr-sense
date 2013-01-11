@@ -9,9 +9,13 @@ import com.searchbox.lucene.SenseQuery;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.lucene.QueryReductionFilter;
 import com.searchbox.utils.SolrCacheKey;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import org.apache.lucene.document.Document;
 import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.search.Explanation;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Sort;
 import org.apache.solr.common.SolrException;
@@ -20,16 +24,23 @@ import org.apache.solr.common.params.FacetParams;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.common.util.SimpleOrderedMap;
+import org.apache.solr.core.SolrCore;
 import org.apache.solr.handler.RequestHandlerBase;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
+import org.apache.solr.schema.IndexSchema;
+import org.apache.solr.search.DocIterator;
 import org.apache.solr.search.DocList;
 import org.apache.solr.search.DocListAndSet;
 import org.apache.solr.search.QParser;
+import org.apache.solr.search.QParserPlugin;
+import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.ReturnFields;
 import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
+import org.apache.solr.search.SortSpec;
+import org.apache.solr.util.SolrPluginUtils;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -58,10 +69,19 @@ public class SenseQueryHandler extends RequestHandlerBase {
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         numRequests++;
         long startTime = System.currentTimeMillis();
-
+        boolean fromcache=false;
+        
         try {
             SolrParams params = req.getParams();
-            SolrCacheKey key = new SolrCacheKey(params);
+            HashSet<String> toIgnore= new HashSet<String>();
+            toIgnore.add("start");
+            toIgnore.add("rows");
+            toIgnore.add("fl");
+            toIgnore.add("wt");
+            toIgnore.add("indent");
+            
+            
+            SolrCacheKey key = new SolrCacheKey(params,toIgnore);
 
             // Set field flags
             ReturnFields returnFields = new ReturnFields(req);
@@ -71,10 +91,19 @@ public class SenseQueryHandler extends RequestHandlerBase {
                 flags |= SolrIndexSearcher.GET_SCORES;
             }
 
+            String defType = params.get(QueryParsing.DEFTYPE, QParserPlugin.DEFAULT_QTYPE);
             String q = params.get(CommonParams.Q);
+            Query query = null;
+            QueryReductionFilter qr = null;
             List<Query> filters = new ArrayList<Query>();
-
+            
             try {
+                if (q != null) {
+                    QParser parser = QParser.getParser(q, defType, req);
+                    query = parser.getQuery();
+                    
+                }
+                
                 String[] fqs = req.getParams().getParams(CommonParams.FQ);
                 if (fqs != null && fqs.length != 0) {
                     for (String fq : fqs) {
@@ -95,7 +124,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
             int start = params.getInt(CommonParams.START, 0);
             int rows = params.getInt(CommonParams.ROWS, 10);
 
-
+            SenseQuery slt = null;
             if (q == null) {
                 numErrors++;
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
@@ -111,12 +140,12 @@ public class SenseQueryHandler extends RequestHandlerBase {
                 //try to get from cache
 
                 sltDocs = (DocListAndSet) sc.get(key.getSet());
-                if (start + rows > 1000 || sltDocs == null) { //not in cache, need to do search
+                if (start + rows > 1000 || sltDocs == null || !params.getBool(CommonParams.CACHE, true)) { //not in cache, need to do search
                     String CKBid = params.get(SenseParams.SENSE_CKB, SenseParams.SENSE_CKB_DEFAULT);
                     String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
                     RealTermFreqVector rtv = new RealTermFreqVector(q, SenseQuery.getAnalyzerForField(req.getSchema(), senseField));
 
-                    QueryReductionFilter qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
+                    qr = new QueryReductionFilter(rtv, CKBid, searcher, senseField);
                     qr.setNumtermstouse(params.getInt(SenseParams.SENSE_QR_NTU, SenseParams.SENSE_QR_NTU_DEFAULT));
 
                     numTermsUsed += qr.getNumtermstouse();
@@ -133,13 +162,14 @@ public class SenseQueryHandler extends RequestHandlerBase {
                     numFiltered += qr.getFiltered().docList.size();
                     numSubset += subFiltered.size();
                     LOGGER.info("Number of documents to search:\t" + subFiltered.size());
-                    SenseQuery slt = new SenseQuery(rtv, senseField, CKBid, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
+                    slt = new SenseQuery(rtv, senseField, CKBid, params.getFloat(SenseParams.SENSE_WEIGHT, SenseParams.DEFAULT_SENSE_WEIGHT), null);
                     sltDocs = searcher.getDocListAndSet(slt, subFiltered, Sort.RELEVANCE, 0, 1000, flags);
                     
                     LOGGER.debug("Adding this keyto cache:\t"+key.getSet().toString());
                     searcher.getCache("sltcache").put(key.getSet(), sltDocs);
                     
                 } else {
+                    fromcache=true;
                     LOGGER.debug("Got result from cache");
                 }
             } else {
@@ -181,6 +211,33 @@ public class SenseQueryHandler extends RequestHandlerBase {
             } else {
                 dbgQuery = true;
                 dbgResults = true;
+            }
+            if (dbg == true) {
+                try {
+                    NamedList dbgInfo = new SimpleOrderedMap();
+                    dbgInfo.add("Query freqs", slt.getAllTermsasString());
+                    dbgInfo.addAll(getExplanations(slt, sltDocs.docList.subset(start, rows), searcher, req.getSchema()));
+                    if (null != filters) {
+                        dbgInfo.add("filter_queries", req.getParams().getParams(CommonParams.FQ));
+                        List<String> fqs = new ArrayList<String>(filters.size());
+                        for (Query fq : filters) {
+                            fqs.add(QueryParsing.toString(fq, req.getSchema()));
+                        }
+                        dbgInfo.add("parsed_filter_queries", fqs);
+                    }
+                    if (null != qr) {
+                        dbgInfo.add("QueryReduction", qr.getDbgInfo());
+                    }
+                    if (null != slt) {
+                        dbgInfo.add("SLT", slt.getDbgInfo());
+
+                    }
+                    dbgInfo.add("fromcache", fromcache);
+                    rsp.add("debug", dbgInfo);
+                } catch (Exception e) {
+                    SolrException.log(SolrCore.log, "Exception during debug", e);
+                    rsp.add("exception_during_debug", SolrException.toStr(e));
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -261,4 +318,20 @@ public class SenseQueryHandler extends RequestHandlerBase {
 
         return all;
     }
+    
+    
+    private static NamedList<Explanation> getExplanations(Query query, DocList docs, SolrIndexSearcher searcher, IndexSchema schema) throws IOException {
+
+        NamedList<Explanation> explainList = new SimpleOrderedMap<Explanation>();
+        DocIterator iterator = docs.iterator();
+        for (int i = 0; i < docs.size(); i++) {
+            int id = iterator.nextDoc();
+
+            Document doc = searcher.doc(id);
+            String strid = schema.printableUniqueKey(doc);
+            explainList.add(strid, searcher.explain(query, id));
+        }
+        return explainList;
+    }
+    
 }

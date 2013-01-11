@@ -146,21 +146,27 @@ public class SenseScoreProvider extends CustomScoreProvider {
      */
     @Override
     public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpls[]) throws IOException {
-        if (valSrcExpls.length == 1) {
-            return customExplain(doc, subQueryExpl, valSrcExpls[0]);
-        }
-        if (valSrcExpls.length == 0) {
-            return subQueryExpl;
-        }
-        float valSrcScore = 1;
-        for (Explanation valSrcExpl : valSrcExpls) {
-            valSrcScore *= valSrcExpl.getValue();
-        }
-        Explanation exp = new Explanation(valSrcScore * subQueryExpl.getValue(), "custom score: product of:");
-        exp.addDetail(subQueryExpl);
-        for (Explanation valSrcExpl : valSrcExpls) {
-            exp.addDetail(valSrcExpl);
-        }
+
+        Explanation exp = new Explanation();
+        Terms terms = context.reader().getTermVector(doc, this.senseField);
+        RealTermFreqVector rtfv = new RealTermFreqVector(terms);
+
+        exp.addDetail(new Explanation(rtfv.getSize(), "num_terms"));
+
+        float ckbscore = 0;
+        float idfscore = 0;
+
+        DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
+        ckbscore = dvector.getDistance(qvector);
+        exp.addDetail(new Explanation(ckbscore, "ckb_score"));
+
+        RealTermFreqVector dtfidf = ckb.getTfIdfVector(rtfv).getUnitVector();
+        idfscore = dtfidf.getDistance(qtfidf);
+        exp.addDetail(new Explanation(idfscore, "tfidf_score"));
+
+        float finalscore = (float) (senseWeight * (2 - ckbscore) + (1 - senseWeight) * (2 - idfscore));
+        exp.addDetail(new Explanation(finalscore, "final_score"));
+
         return exp;
     }
 

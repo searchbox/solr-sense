@@ -30,9 +30,21 @@ public class RealTermFreqVector {
     private static final Logger LOGGER = LoggerFactory.getLogger(RealTermFreqVector.class);
     private String[] terms;
     private float[] freqs;
+    private float norm=-1;
     int size;
     int nextpos;
 
+    public float getNorm(){
+        if (norm == -1) {
+            norm=0;
+            for (int zz = 0; zz < size; zz++) {
+                norm += freqs[zz] * freqs[zz];
+            }
+            norm = (float) Math.sqrt(norm);
+        }
+        return norm;
+    }
+    
     public void set(String term, float freq, int pos) {
         terms[pos] = term;
         freqs[pos] = freq;
@@ -127,17 +139,11 @@ public class RealTermFreqVector {
     }
 
     public RealTermFreqVector getUnitVector() {
-        float norm = 0;
-
-        for (int zz = 0; zz < size; zz++) {
-            norm += freqs[zz] * freqs[zz];
-        }
-
-        norm = (float) Math.sqrt(norm);
-
+        
+        float lnorm=getNorm();
         float[] newfreqs = freqs;
         for (int zz = 0; zz < size; zz++) {
-            newfreqs[zz] = freqs[zz] / norm;
+            newfreqs[zz] = freqs[zz] / lnorm;
         }
 
         return new RealTermFreqVector(terms, newfreqs, size);

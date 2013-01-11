@@ -10,7 +10,8 @@ package com.searchbox.math;
  */
 public class DoubleFullVector {
        private float[] vector;
-
+       private float norm=-1;
+       
     public DoubleFullVector(float[] vector) {
         this.vector = vector;
     }
@@ -20,7 +21,10 @@ public class DoubleFullVector {
     }
 
     public float getNorm() {
-        return VectorUtils.calculateNorm(vector);
+        if(norm==-1){
+            norm= VectorUtils.calculateNorm(vector);
+        }
+        return norm;
     }
 
     public float getDistance(final DoubleFullVector vector) {
@@ -62,10 +66,10 @@ public class DoubleFullVector {
     }
 
     public DoubleFullVector getUnitVector() {
-        float norm = getNorm();
+        float lnorm = getNorm();
         float[] out = new float[vector.length];
         for (int zz = 0; zz < vector.length; zz++) {
-            out[zz] = vector[zz] * 1.0f / norm;
+            out[zz] = vector[zz] * 1.0f / lnorm;
         }
         return new DoubleFullVector(out);
     }
