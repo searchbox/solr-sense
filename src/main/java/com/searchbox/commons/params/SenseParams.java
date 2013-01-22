@@ -13,7 +13,7 @@ public class SenseParams {
     public static String SENSE_WEIGHT = "sw";
     public static float DEFAULT_SENSE_WEIGHT = 0.8f;
 
-    public static String SENSE_FIELD = "sf";
+    public static String SENSE_FIELD = "slt.sf";
     public static String DEFAULT_SENSE_FIELD = "article-abstract";
     
     public static String SENSE_QPARSER = "sense";
