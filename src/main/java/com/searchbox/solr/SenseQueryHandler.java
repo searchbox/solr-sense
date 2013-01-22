@@ -139,13 +139,13 @@ public class SenseQueryHandler extends RequestHandlerBase {
             lstartTime = System.currentTimeMillis();
 
             SolrIndexSearcher searcher = req.getSearcher();
-            SolrCache sc = searcher.getCache("sltcache");
+            SolrCache sc = searcher.getCache("com.searchbox.sltcache");
             DocListAndSet sltDocs = null;
             if (sc != null) {
                 //try to get from cache
                 sltDocs = (DocListAndSet) sc.get(key.getSet());
             } else {
-                LOGGER.error("sltcache not defined, can't cache slt queries");
+                LOGGER.error("com.searchbox.sltcache not defined, can't cache slt queries");
             }
 
             if (start + rows > 1000 || sltDocs == null || !params.getBool(CommonParams.CACHE, true)) { //not in cache, need to do search
@@ -189,7 +189,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
                 lstartTime = System.currentTimeMillis();
 
                 LOGGER.debug("Adding this keyto cache:\t" + key.getSet().toString());
-                searcher.getCache("sltcache").put(key.getSet(), sltDocs);
+                searcher.getCache("com.searchbox.sltcache").put(key.getSet(), sltDocs);
 
             } else {
                 fromcache = true;

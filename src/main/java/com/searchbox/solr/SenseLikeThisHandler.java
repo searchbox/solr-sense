@@ -182,13 +182,13 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             LOGGER.debug("Find Query Doc:\t" + (System.currentTimeMillis() - lstartTime));
             lstartTime = System.currentTimeMillis();
 
-            SolrCache sc = searcher.getCache("sltcache");
+            SolrCache sc = searcher.getCache("com.searchbox.sltcache");
             DocListAndSet sltDocs = null;
             if (sc != null) {
                 //try to get from cache
                 sltDocs = (DocListAndSet) sc.get(key.getSet());
             } else {
-                LOGGER.error("sltcache not defined, can't cache slt queries");
+                LOGGER.error("com.searchbox.sltcache not defined, can't cache slt queries");
             }
 
             sltDocs = (DocListAndSet) sc.get(key.getSet());
@@ -238,7 +238,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 lstartTime = System.currentTimeMillis();
 
                 LOGGER.debug("Adding this keyto cache:\t" + key.getSet().toString());
-                searcher.getCache("sltcache").put(key.getSet(), sltDocs);
+                searcher.getCache("com.searchbox.sltcache").put(key.getSet(), sltDocs);
 
 
 
