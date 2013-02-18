@@ -23,18 +23,13 @@ import com.searchbox.lucene.CategoryQuery;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CategorizationBase;
 import java.io.Reader;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.*;
-import org.apache.lucene.util.BytesRef;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.common.params.FacetParams;
@@ -87,7 +82,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
         String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
         BooleanQuery catfilter = new BooleanQuery();
         // Set field flags
-        ReturnFields returnFields = new ReturnFields(req);
+        ReturnFields returnFields = new SolrReturnFields(req);
         rsp.setReturnFields(returnFields);
         int flags = 0;
         if (returnFields.wantsScore()) {
@@ -117,7 +112,7 @@ public class CategoryLikeThis extends RequestHandlerBase {
                     }
                 }
             }
-        } catch (ParseException e) {
+        } catch (Exception e) {
             numErrors++;
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }

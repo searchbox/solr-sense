@@ -101,7 +101,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
             SolrCacheKey key = new SolrCacheKey(params, toIgnore);
 
             // Set field flags
-            ReturnFields returnFields = new ReturnFields(req);
+            ReturnFields returnFields = new SolrReturnFields(req);
             rsp.setReturnFields(returnFields);
             int flags = 0;
             if (returnFields.wantsScore()) {
@@ -131,7 +131,7 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                         }
                     }
                 }
-            } catch (ParseException e) {
+            } catch (Exception e) {
                 numErrors++;
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
             }

@@ -39,8 +39,7 @@ import org.apache.solr.search.QueryParsing;
 import org.apache.solr.search.ReturnFields;
 import org.apache.solr.search.SolrCache;
 import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.search.SortSpec;
-import org.apache.solr.util.SolrPluginUtils;
+import org.apache.solr.search.SolrReturnFields;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -87,7 +86,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
             SolrCacheKey key = new SolrCacheKey(params, toIgnore);
 
             // Set field flags
-            ReturnFields returnFields = new ReturnFields(req);
+            ReturnFields returnFields = new SolrReturnFields(req);
             rsp.setReturnFields(returnFields);
             int flags = 0;
             if (returnFields.wantsScore()) {
@@ -116,7 +115,7 @@ public class SenseQueryHandler extends RequestHandlerBase {
                         }
                     }
                 }
-            } catch (ParseException e) {
+            } catch (Exception e) {
                 numErrors++;
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
             }

@@ -10,6 +10,8 @@ package com.searchbox.commons.params;
  */
 public class SenseParams {
     
+    public static String PRODUCT_KEY="sen";
+    
     public static String SENSE_WEIGHT = "sw";
     public static float DEFAULT_SENSE_WEIGHT = 0.8f;
 
