@@ -44,6 +44,8 @@ import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Solr MoreLikeThis --
@@ -56,16 +58,43 @@ import org.apache.solr.util.SolrPluginUtils;
 public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
     // Pattern is thread safe -- TODO? share this with general 'fl' param
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SenseLikeThisHandlerNoReduction.class);
+    private boolean keystate = true;
     private static final Pattern splitList = Pattern.compile(",| ");
 
     @Override
     public void init(NamedList args) {
+
+        LOGGER.trace("Checking license");
+        /*--------LICENSE CHECK ------------ */
+        String key = (String) args.get("key");
+        if (key == null) {
+            keystate = false;
+            throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+                    "Need to specify license key using <str name=\"key\"></str>.\n If you don't have a key email contact@searchbox.com to obtain one.");
+        }
+        if (!checkLicense(key, SenseParams.PRODUCT_KEY)) {
+            keystate = false;
+            throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+                    "License key is not valid for this product, email contact@searchbox.com to obtain one.");
+        }
+
         super.init(args);
+    }
+
+    private boolean checkLicense(String key, String PRODUCT_KEY) {
+        return com.searchbox.utils.DecryptLicense.checkLicense(key, PRODUCT_KEY);
     }
 
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         SolrParams params = req.getParams();
+
+        if (!keystate) {
+            LOGGER.error("License key failure, not performing sense query. Please email contact@searchbox.com for more information.");
+            return;
+        }
+
         int docID;
         // Set field flags
         ReturnFields returnFields = new SolrReturnFields(req);
@@ -161,8 +190,8 @@ public class SenseLikeThisHandlerNoReduction extends RequestHandlerBase {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                         "SenseLikeThis requires either a query (?q=) or text to find similar documents.");
             }
-            
-            String CKBid = params.get(SenseParams.SENSE_CKB,SenseParams.SENSE_CKB_DEFAULT);
+
+            String CKBid = params.get(SenseParams.SENSE_CKB, SenseParams.SENSE_CKB_DEFAULT);
 
             String senseField = params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD);
             slt = new SenseQuery(new RealTermFreqVector(docID, searcher.getIndexReader(), senseField), senseField, CKBid,

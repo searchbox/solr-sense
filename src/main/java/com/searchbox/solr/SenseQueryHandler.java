@@ -58,12 +58,33 @@ public class SenseQueryHandler extends RequestHandlerBase {
     volatile long numTermsConsidered;
     volatile long numTermsUsed;
     private static final Logger LOGGER = LoggerFactory.getLogger(SenseQueryHandler.class);
-
+    private boolean keystate=true;
+    
     @Override
     public void init(NamedList args) {
+        
+        LOGGER.trace("Checking license");
+        /*--------LICENSE CHECK ------------ */
+        String key = (String) args.get("key");
+        if (key == null) {
+            keystate = false;
+            throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+                    "Need to specify license key using <str name=\"key\"></str>.\n If you don't have a key email contact@searchbox.com to obtain one.");
+        }
+        if (!checkLicense(key, SenseParams.PRODUCT_KEY)) {
+            keystate = false;
+            throw new SolrException(SolrException.ErrorCode.SERVER_ERROR,
+                    "License key is not valid for this product, email contact@searchbox.com to obtain one.");
+        }
         super.init(args);
+        
+        
     }
 
+    private boolean checkLicense(String key, String PRODUCT_KEY) {
+        return com.searchbox.utils.DecryptLicense.checkLicense(key, PRODUCT_KEY);
+    }
+    
     @Override
     public void handleRequestBody(SolrQueryRequest req, SolrQueryResponse rsp) throws Exception {
         NamedList<Object> timinginfo = new NamedList<Object>();
@@ -71,6 +92,12 @@ public class SenseQueryHandler extends RequestHandlerBase {
         long startTime = System.currentTimeMillis();
         long lstartTime = System.currentTimeMillis();
 
+        
+         if (!keystate) {
+            LOGGER.error("License key failure, not performing sense query. Please email contact@searchbox.com for more information.");
+            return;
+        }
+        
         boolean fromcache = false;
 
         try {

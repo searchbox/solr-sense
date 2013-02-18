@@ -24,7 +24,7 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
 
     private static HashMap<String, CognitiveKnowledgeBase> ckbByID = new HashMap<String, CognitiveKnowledgeBase>();
     private static final Logger LOGGER = LoggerFactory.getLogger(SenseQParserPlugin.class);
-    public static final String NAME = "sense";
+    
     
     private SolrParams defaults;
 
@@ -52,6 +52,10 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
     public void init(NamedList nl) {  //need this for init of CKBs
         super.init(nl);
 
+        
+        
+        
+        
         LOGGER.info("#### eagerly initializing CognitiveKnowledgeBases");
         List lst = nl.getAll("ckbs");
         for (Iterator<NamedList> it = lst.iterator(); it.hasNext();) {
@@ -79,4 +83,5 @@ public class SenseQParserPlugin extends ExtendedDismaxQParserPlugin {
         
         LOGGER.info("---- CKBs Initialization DONE");
     }
+ 
 }
