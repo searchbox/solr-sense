@@ -14,14 +14,6 @@ nd wishes to find documents which are conceptually similar.
 Sense: The user has a block of text for which they’d like to find documents 
 which are conceptually similar.
 
-For a the complete documentation please see the Searchbox web site at
-
-http://showcase.searchbox.com/sense
-
-and the knoweldge base:
-
-http://help.searchbox.com
-
 
 We recommend you head over to our website and register your email address 
 to receive notifications about software updates and CKBs. We're rolling out 
@@ -32,8 +24,14 @@ months, so stay tuned!
 Getting Started
 ---------------
 
-A tutorial using the inclosed pubmed demo dataset can be found at
-   http://help.searchbox.com/searchbox-sense/installation/
+For a the complete documentation please see the Searchbox web site at
+
+http://www.searchbox.com/products/searchbox-plugins/searchbox-sense/
+
+and the knoweldge base:
+
+http://help.searchbox.com/solr-plugins/searchbox-sense
+
 
    
 Files included in this Searchbox-Sense distribution
