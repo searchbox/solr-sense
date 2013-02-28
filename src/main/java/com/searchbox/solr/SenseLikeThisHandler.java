@@ -222,22 +222,24 @@ public class SenseLikeThisHandler extends RequestHandlerBase {
                 bq.add(new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName())))), BooleanClause.Occur.MUST_NOT);
                 filters.add(bq);
 
-                String senseField = SenseParams.DEFAULT_SENSE_FIELD;
                 String[] senseFields = splitList.split(params.get(SenseParams.SENSE_FIELD, SenseParams.DEFAULT_SENSE_FIELD));
+                String senseField = (senseFields[0]!=null)?senseFields[0]:SenseParams.DEFAULT_SENSE_FIELD;
 
                 //TODO more intelligent handling of multiple fields , can probably do a boolean junction of multiple sensequeries, but this will be slow
                 long maxlength = -1;
                 for (String possibleField : senseFields) {
+                  try{
                     long flength = doc.getField(possibleField).stringValue().length();
                     if (flength > maxlength) {
                         senseField = possibleField;
                         maxlength = flength;
                     }
+                  } catch (Exception e){
+                    System.out.println("Error: " + e.getMessage());
+                  }
                 }
 
                 LOGGER.debug("Using sense field :\t" + (senseField));
-
-
 
                 String CKBid = params.get(SenseParams.SENSE_CKB, SenseParams.SENSE_CKB_DEFAULT);
 
