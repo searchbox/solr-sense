@@ -26,7 +26,7 @@ Getting Started
 
 For a the complete documentation please see the Searchbox web site at
 
-http://www.searchbox.by/products/searchbox-plugins/searchbox-sense/
+http://www.searchbox.com/products/searchbox-plugins/searchbox-sense/
 
 and the knoweldge base:
 
