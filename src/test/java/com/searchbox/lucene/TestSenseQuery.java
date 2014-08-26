@@ -21,7 +21,7 @@
 //
 ///**
 // *
-// * @author gamars
+// *
 // */
 //public class TestSenseQuery extends SolrTestCaseJ4 {
 //

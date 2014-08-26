@@ -7,8 +7,6 @@ package com.searchbox.lucene;
 import com.searchbox.math.DoubleFullVector;
 import com.searchbox.math.RealTermFreqVector;
 import com.searchbox.sense.CognitiveKnowledgeBase;
-import java.io.IOException;
-import java.util.HashMap;
 import org.apache.lucene.index.AtomicReaderContext;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.queries.CustomScoreProvider;
@@ -16,180 +14,183 @@ import org.apache.lucene.search.Explanation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.HashMap;
+
 /**
  *
- * @author gamars
+ *
  */
 public class SenseScoreProvider extends CustomScoreProvider {
-    
-    private static final Logger LOGGER = LoggerFactory.getLogger(SenseScoreProvider.class);
-    
-    private final CognitiveKnowledgeBase ckb;
-    private final DoubleFullVector qvector;
-    private final RealTermFreqVector qtfidf;
-    private final float senseWeight;
-    private final String senseField;
-    private HashMap <Integer,Float> scoreCache= new HashMap();
-    
-    
-    SenseScoreProvider(AtomicReaderContext context, String senseField,
-            CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, float ckbWeight) {
-        super(context);
-        this.ckb = ckb;
-        this.qvector = qvector;
-        this.senseWeight = ckbWeight;
-        this.senseField = senseField;
-        this.qtfidf =qtfidf;
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(SenseScoreProvider.class);
+
+  private final CognitiveKnowledgeBase ckb;
+  private final DoubleFullVector qvector;
+  private final RealTermFreqVector qtfidf;
+  private final float senseWeight;
+  private final String senseField;
+  private HashMap<Integer, Float> scoreCache = new HashMap();
+
+
+  SenseScoreProvider(AtomicReaderContext context, String senseField,
+                     CognitiveKnowledgeBase ckb, DoubleFullVector qvector, RealTermFreqVector qtfidf, float ckbWeight) {
+    super(context);
+    this.ckb = ckb;
+    this.qvector = qvector;
+    this.senseWeight = ckbWeight;
+    this.senseField = senseField;
+    this.qtfidf = qtfidf;
+  }
+
+  /**
+   * Compute a custom score by the subQuery score and a number of
+   * {@link org.apache.lucene.queries.function.FunctionQuery} scores. <p>
+   * Subclasses can override this method to modify the custom score. <p> If
+   * your custom scoring is different than the default herein you should
+   * override at least one of the two customScore() methods. If the number of
+   * ValueSourceQueries is always &lt; 2 it is sufficient to override the
+   * other {@link #customScore(int, float, float) customScore()} method, which
+   * is simpler. <p> The default computation herein is a multiplication of
+   * given scores:
+   * <pre>
+   *     ModifiedScore = valSrcScore * valSrcScores[0] * valSrcScores[1] * ...
+   * </pre>
+   *
+   * @param doc           id of scored doc.
+   * @param subQueryScore score of that doc by the subQuery.
+   * @param valSrcScores  scores of that doc by the ValueSourceQuery.
+   * @return custom score.
+   */
+
+  @Override
+  public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
+
+
+    Float finalscore = scoreCache.get(doc);
+    //System.out.println("Custom score on:\t"+doc);
+    if (finalscore != null) {
+      //  System.out.println("Custom score on:\t"+doc+"\tfrom cache!");
+      return finalscore;
+    }
+    Terms terms = context.reader().getTermVector(doc, this.senseField);
+    RealTermFreqVector rtfv = new RealTermFreqVector(terms);
+
+    if (LOGGER.isTraceEnabled()) {
+      LOGGER.trace("Evaluating Document with TF size: " + rtfv.getSize());
     }
 
-    /**
-     * Compute a custom score by the subQuery score and a number of
-     * {@link org.apache.lucene.queries.function.FunctionQuery} scores. <p>
-     * Subclasses can override this method to modify the custom score. <p> If
-     * your custom scoring is different than the default herein you should
-     * override at least one of the two customScore() methods. If the number of
-     * ValueSourceQueries is always &lt; 2 it is sufficient to override the
-     * other {@link #customScore(int, float, float) customScore()} method, which
-     * is simpler. <p> The default computation herein is a multiplication of
-     * given scores:
-     * <pre>
-     *     ModifiedScore = valSrcScore * valSrcScores[0] * valSrcScores[1] * ...
-     * </pre>
-     *
-     * @param doc id of scored doc.
-     * @param subQueryScore score of that doc by the subQuery.
-     * @param valSrcScores scores of that doc by the ValueSourceQuery.
-     * @return custom score.
-     */
-
-    @Override
-    public float customScore(int doc, float subQueryScore, float valSrcScores[]) throws IOException {
-        
-        
-        Float finalscore = scoreCache.get(doc);
-        //System.out.println("Custom score on:\t"+doc);
-        if(finalscore!=null) {
-          //  System.out.println("Custom score on:\t"+doc+"\tfrom cache!");
-            return finalscore;
-        }
-        Terms terms = context.reader().getTermVector(doc, this.senseField);
-        RealTermFreqVector rtfv= new RealTermFreqVector(terms);
-
-        if(LOGGER.isTraceEnabled()){
-            LOGGER.trace("Evaluating Document with TF size: " + rtfv.getSize());
-        }
-        
-        if(LOGGER.isTraceEnabled()){
-            for (int zz=0;zz<rtfv.getSize();zz++) {
-                LOGGER.trace("term: |" + rtfv.getTerms()[zz] + "| -- frequ: " + rtfv.getFreqs()[zz]);
-            }
-        }
-        
-        
-        double ckbscore=0;
-        double idfscore=0;
-        
-        if (senseWeight != 0.0) {
-            DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
-            ckbscore = dvector.getDistance(qvector);
-             if(LOGGER.isTraceEnabled())
-                LOGGER.trace("ckbscore: " + ckbscore);
-        }
-        if (senseWeight != 1.0) {
-            RealTermFreqVector dtfidf =ckb.getTfIdfVector(rtfv).getUnitVector();
-            idfscore= dtfidf.getDistance(qtfidf);
-             if(LOGGER.isTraceEnabled())
-                LOGGER.trace("idfscore: " + idfscore);
-        }
-        
-         finalscore=(float) (senseWeight*(2-ckbscore)+(1-senseWeight)*(2-idfscore));
-         if(LOGGER.isTraceEnabled())
-            LOGGER.trace("Final score "+ finalscore);
-        scoreCache.put(doc, finalscore);
-        return finalscore; 
+    if (LOGGER.isTraceEnabled()) {
+      for (int zz = 0; zz < rtfv.getSize(); zz++) {
+        LOGGER.trace("term: |" + rtfv.getTerms()[zz] + "| -- frequ: " + rtfv.getFreqs()[zz]);
+      }
     }
 
-    /**
-     * Compute a custom score by the subQuery score and the ValueSourceQuery
-     * score. <p> Subclasses can override this method to modify the custom
-     * score. <p> If your custom scoring is different than the default herein
-     * you should override at least one of the two customScore() methods. If the
-     * number of ValueSourceQueries is always &lt; 2 it is sufficient to
-     * override this customScore() method, which is simpler. <p> The default
-     * computation herein is a multiplication of the two scores:
-     * <pre>
-     *     ModifiedScore = subQueryScore * valSrcScore
-     * </pre>
-     *
-     * @param doc id of scored doc.
-     * @param subQueryScore score of that doc by the subQuery.
-     * @param valSrcScore score of that doc by the ValueSourceQuery.
-     * @return custom score.
-     */
-    @Override
-    public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
-        LOGGER.trace("Scoring document.....?! returnung 1k " + doc);
-        return 1000f;
 
+    double ckbscore = 0;
+    double idfscore = 0;
+
+    if (senseWeight != 0.0) {
+      DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
+      ckbscore = dvector.getDistance(qvector);
+      if (LOGGER.isTraceEnabled())
+        LOGGER.trace("ckbscore: " + ckbscore);
+    }
+    if (senseWeight != 1.0) {
+      RealTermFreqVector dtfidf = ckb.getTfIdfVector(rtfv).getUnitVector();
+      idfscore = dtfidf.getDistance(qtfidf);
+      if (LOGGER.isTraceEnabled())
+        LOGGER.trace("idfscore: " + idfscore);
     }
 
-    /**
-     * Explain the custom score. Whenever overriding
-     * {@link #customScore(int, float, float[])}, this method should also be
-     * overridden to provide the correct explanation for the part of the custom
-     * scoring.
-     *
-     * @param doc doc being explained.
-     * @param subQueryExpl explanation for the sub-query part.
-     * @param valSrcExpls explanation for the value source part.
-     * @return an explanation for the custom score
-     */
-    @Override
-    public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpls[]) throws IOException {
+    finalscore = (float) (senseWeight * (2 - ckbscore) + (1 - senseWeight) * (2 - idfscore));
+    if (LOGGER.isTraceEnabled())
+      LOGGER.trace("Final score " + finalscore);
+    scoreCache.put(doc, finalscore);
+    return finalscore;
+  }
 
-        Explanation exp = new Explanation();
-        Terms terms = context.reader().getTermVector(doc, this.senseField);
-        RealTermFreqVector rtfv = new RealTermFreqVector(terms);
+  /**
+   * Compute a custom score by the subQuery score and the ValueSourceQuery
+   * score. <p> Subclasses can override this method to modify the custom
+   * score. <p> If your custom scoring is different than the default herein
+   * you should override at least one of the two customScore() methods. If the
+   * number of ValueSourceQueries is always &lt; 2 it is sufficient to
+   * override this customScore() method, which is simpler. <p> The default
+   * computation herein is a multiplication of the two scores:
+   * <pre>
+   *     ModifiedScore = subQueryScore * valSrcScore
+   * </pre>
+   *
+   * @param doc           id of scored doc.
+   * @param subQueryScore score of that doc by the subQuery.
+   * @param valSrcScore   score of that doc by the ValueSourceQuery.
+   * @return custom score.
+   */
+  @Override
+  public float customScore(int doc, float subQueryScore, float valSrcScore) throws IOException {
+    LOGGER.trace("Scoring document.....?! returnung 1k " + doc);
+    return 1000f;
 
-        exp.addDetail(new Explanation(rtfv.getSize(), "num_terms"));
+  }
 
-        float ckbscore = 0;
-        float idfscore = 0;
+  /**
+   * Explain the custom score. Whenever overriding
+   * {@link #customScore(int, float, float[])}, this method should also be
+   * overridden to provide the correct explanation for the part of the custom
+   * scoring.
+   *
+   * @param doc          doc being explained.
+   * @param subQueryExpl explanation for the sub-query part.
+   * @param valSrcExpls  explanation for the value source part.
+   * @return an explanation for the custom score
+   */
+  @Override
+  public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpls[]) throws IOException {
 
-        DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
-        ckbscore = dvector.getDistance(qvector);
-        exp.addDetail(new Explanation(ckbscore, "ckb_score"));
+    Explanation exp = new Explanation();
+    Terms terms = context.reader().getTermVector(doc, this.senseField);
+    RealTermFreqVector rtfv = new RealTermFreqVector(terms);
 
-        RealTermFreqVector dtfidf = ckb.getTfIdfVector(rtfv).getUnitVector();
-        idfscore = dtfidf.getDistance(qtfidf);
-        exp.addDetail(new Explanation(idfscore, "tfidf_score"));
+    exp.addDetail(new Explanation(rtfv.getSize(), "num_terms"));
 
-        float finalscore = (float) (senseWeight * (2 - ckbscore) + (1 - senseWeight) * (2 - idfscore));
-        exp.addDetail(new Explanation(finalscore, "final_score"));
+    float ckbscore = 0;
+    float idfscore = 0;
 
-        return exp;
+    DoubleFullVector dvector = ckb.getFullCkbVector(rtfv).getUnitVector();
+    ckbscore = dvector.getDistance(qvector);
+    exp.addDetail(new Explanation(ckbscore, "ckb_score"));
+
+    RealTermFreqVector dtfidf = ckb.getTfIdfVector(rtfv).getUnitVector();
+    idfscore = dtfidf.getDistance(qtfidf);
+    exp.addDetail(new Explanation(idfscore, "tfidf_score"));
+
+    float finalscore = (float) (senseWeight * (2 - ckbscore) + (1 - senseWeight) * (2 - idfscore));
+    exp.addDetail(new Explanation(finalscore, "final_score"));
+
+    return exp;
+  }
+
+  /**
+   * Explain the custom score. Whenever overriding
+   * {@link #customScore(int, float, float)}, this method should also be
+   * overridden to provide the correct explanation for the part of the custom
+   * scoring.
+   *
+   * @param doc          doc being explained.
+   * @param subQueryExpl explanation for the sub-query part.
+   * @param valSrcExpl   explanation for the value source part.
+   * @return an explanation for the custom score
+   */
+  @Override
+  public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpl) throws IOException {
+    float valSrcScore = 1;
+    if (valSrcExpl != null) {
+      valSrcScore *= valSrcExpl.getValue();
     }
-
-    /**
-     * Explain the custom score. Whenever overriding
-     * {@link #customScore(int, float, float)}, this method should also be
-     * overridden to provide the correct explanation for the part of the custom
-     * scoring.
-     *
-     * @param doc doc being explained.
-     * @param subQueryExpl explanation for the sub-query part.
-     * @param valSrcExpl explanation for the value source part.
-     * @return an explanation for the custom score
-     */
-    @Override
-    public Explanation customExplain(int doc, Explanation subQueryExpl, Explanation valSrcExpl) throws IOException {
-        float valSrcScore = 1;
-        if (valSrcExpl != null) {
-            valSrcScore *= valSrcExpl.getValue();
-        }
-        Explanation exp = new Explanation(valSrcScore * subQueryExpl.getValue(), "custom score: product of:");
-        exp.addDetail(subQueryExpl);
-        exp.addDetail(valSrcExpl);
-        return exp;
-    }
+    Explanation exp = new Explanation(valSrcScore * subQueryExpl.getValue(), "custom score: product of:");
+    exp.addDetail(subQueryExpl);
+    exp.addDetail(valSrcExpl);
+    return exp;
+  }
 }
